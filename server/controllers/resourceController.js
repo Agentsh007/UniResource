@@ -4,8 +4,8 @@ const Resource = require('../models/Resource');
 exports.uploadResource = async (req, res) => {
     const { title, description, type, visibility, targetBatch } = req.body;
 
-    // Normalize path to forward slashes for URL usage
-    const fileUrl = req.file ? req.file.path.replace(/\\/g, "/") : '';
+    // Cloudinary returns the URL in req.file.path
+    const fileUrl = req.file ? req.file.path : '';
 
     try {
         const resource = new Resource({
