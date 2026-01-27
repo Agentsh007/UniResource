@@ -1,145 +1,72 @@
-import { createContext, useReducer, useEffect } from 'react';
-import { jwtDecode } from "jwt-decode";
-import api from '../services/api';
+import React, { createContext, useState, useEffect } from 'react';
+import axios from '../utils/axiosConfig';
+import { jwtDecode } from 'jwt-decode';
 
-const initialState = {
-    token: localStorage.getItem('token'),
-    isAuthenticated: null,
-    loading: true,
-    user: null,
-    role: null, // 'TEACHER' or 'BATCH'
-};
-
-const AuthContext = createContext(initialState);
-
-const authReducer = (state, action) => {
-    switch (action.type) {
-        case 'USER_LOADED':
-            return {
-                ...state,
-                isAuthenticated: true,
-                loading: false,
-                user: action.payload,
-                role: action.payload.role
-            };
-        case 'LOGIN_SUCCESS':
-        case 'REGISTER_SUCCESS':
-            localStorage.setItem('token', action.payload.token);
-            return {
-                ...state,
-                ...action.payload,
-                isAuthenticated: true,
-                loading: false,
-                role: action.payload.user.role
-            };
-        case 'AUTH_ERROR':
-        case 'LOGIN_FAIL':
-        case 'LOGOUT':
-            localStorage.removeItem('token');
-            return {
-                ...state,
-                token: null,
-                isAuthenticated: false,
-                loading: false,
-                user: null,
-                role: null
-            };
-        default:
-            return state;
-    }
-};
+export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [state, dispatch] = useReducer(authReducer, initialState);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    // Load User Helper
-    const loadUser = () => {
-        const token = localStorage.getItem('token');
-        if (token) {
+    const loadUser = async () => {
+        if (localStorage.getItem('token')) {
             try {
-                const decoded = jwtDecode(token);
-                // Check expiry?
-                if (decoded.exp * 1000 < Date.now()) {
-                    dispatch({ type: 'LOGOUT' });
-                    return;
-                }
-                dispatch({ type: 'USER_LOADED', payload: decoded });
+                const res = await axios.get('/auth/me');
+                setUser(res.data);
             } catch (err) {
-                dispatch({ type: 'AUTH_ERROR' });
+                console.error("Load User Error:", err);
+                localStorage.removeItem('token');
+                setUser(null);
             }
-        } else {
-            dispatch({ type: 'AUTH_ERROR' });
         }
+        setLoading(false);
     };
 
     useEffect(() => {
         loadUser();
     }, []);
 
-    // Login Teacher
-    const loginTeacher = async (formData) => {
+    const loginUser = async (email, password) => {
         try {
-            const res = await api.post('/auth/teacher/login', formData);
-            dispatch({
-                type: 'LOGIN_SUCCESS',
-                payload: res.data
-            });
-            return true;
+            const res = await axios.post('/auth/login', { email, password });
+            localStorage.setItem('token', res.data.token);
+            await loadUser();
+            return { success: true };
         } catch (err) {
-            dispatch({ type: 'LOGIN_FAIL' });
-            return false;
+            return { success: false, msg: err.response?.data?.msg || 'Login failed' };
         }
     };
 
-    // Register Teacher
-    const registerTeacher = async (formData) => {
+    const loginBatch = async (username, password) => {
         try {
-            const res = await api.post('/auth/teacher/register', formData);
-            dispatch({
-                type: 'REGISTER_SUCCESS',
-                payload: res.data
-            });
-            return true;
+            const res = await axios.post('/auth/login-batch', { username, password });
+            localStorage.setItem('token', res.data.token);
+            await loadUser();
+            return { success: true };
         } catch (err) {
-            dispatch({ type: 'LOGIN_FAIL' }); // Simplify fail state
-            return false;
+            return { success: false, msg: err.response?.data?.msg || 'Login failed' };
         }
     };
 
-    // Login Batch
-    const loginBatch = async (formData) => {
+    const registerUser = async (formData) => {
         try {
-            const res = await api.post('/auth/batch/login', formData);
-            dispatch({
-                type: 'LOGIN_SUCCESS',
-                payload: res.data
-            });
-            return true;
+            const res = await axios.post('/auth/register-public', formData);
+            localStorage.setItem('token', res.data.token);
+            await loadUser();
+            return { success: true };
         } catch (err) {
-            dispatch({ type: 'LOGIN_FAIL' });
-            return false;
+            return { success: false, msg: err.response?.data?.msg || 'Registration failed' };
         }
     };
 
-    const logout = () => dispatch({ type: 'LOGOUT' });
+    const logout = () => {
+        localStorage.removeItem('token');
+        setUser(null);
+    };
 
     return (
-        <AuthContext.Provider
-            value={{
-                token: state.token,
-                isAuthenticated: state.isAuthenticated,
-                loading: state.loading,
-                user: state.user,
-                role: state.role,
-                loginTeacher,
-                registerTeacher,
-                loginBatch,
-                logout
-            }}
-        >
+        <AuthContext.Provider value={{ user, loading, loginUser, loginBatch, registerUser, logout, loadUser }}>
             {children}
         </AuthContext.Provider>
     );
 };
-
-export default AuthContext;

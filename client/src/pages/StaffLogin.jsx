@@ -1,0 +1,98 @@
+import React, { useState, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+import { Loader, Toast } from '../components/UI';
+
+const StaffLogin = () => {
+    const [isRegister, setIsRegister] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        email: '', password: '', full_name: '', role: 'TEACHER', secret_code: '', department: ''
+    });
+    const [error, setError] = useState('');
+    const { loginUser, registerUser, user } = useContext(AuthContext);
+    const navigate = useNavigate();
+
+    React.useEffect(() => {
+        if (user) {
+            if (user.role === 'CHAIRMAN') navigate('/chairman');
+            else if (user.role === 'COORDINATOR') navigate('/coordinator');
+            else if (user.role === 'COMPUTER_OPERATOR') navigate('/operator');
+            else if (user.role === 'CC') navigate('/cc');
+            else if (user.role === 'TEACHER') navigate('/teacher');
+            else if (user.role === 'BATCH') navigate('/batch');
+        }
+    }, [user, navigate]);
+
+    const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    const onSubmit = async e => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            let res;
+            if (isRegister) {
+                res = await registerUser(formData);
+            } else {
+                res = await loginUser(formData.email, formData.password);
+            }
+
+            if (res.success) {
+                // Redirection handled by useEffect
+            } else {
+                setError(res.msg);
+            }
+        } catch (err) {
+            console.error('StaffLogin Error:', err);
+            setError(err.message || 'An unexpected error occurred.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+            <div className="glass-panel" style={{ width: '100%', maxWidth: '400px' }}>
+                <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                    {isRegister ? 'Staff Registration' : 'Staff Login'}
+                </h2>
+                {error && <Toast message={error} onClose={() => setError('')} />}
+
+                {loading ? <div style={{ textAlign: 'center', padding: '2rem' }}><Loader /><p style={{ marginTop: '1rem', color: 'var(--text-dim)' }}>Connecting to server...</p></div> :
+                    <form onSubmit={onSubmit}>
+                        {isRegister && (
+                            <>
+                                <input type="text" placeholder="Full Name" name="full_name" value={formData.full_name} onChange={onChange} required />
+                                <select name="role" value={formData.role} onChange={onChange}>
+                                    <option value="TEACHER">Teacher</option>
+                                    <option value="CHAIRMAN">Chairman</option>
+                                </select>
+                                <input type="text" placeholder="Department (e.g. CSE)" name="department" value={formData.department} onChange={onChange} required />
+                                <input type="text" placeholder={formData.role === 'CHAIRMAN' ? "Chairman Secret Code" : "Faculty Secret Code"} name="secret_code" value={formData.secret_code} onChange={onChange} required />
+                            </>
+                        )}
+                        <input type="email" placeholder="Email Address" name="email" value={formData.email} onChange={onChange} required />
+                        <input type="password" placeholder="Password" name="password" value={formData.password} onChange={onChange} required />
+
+                        <button type="submit" className="btn-primary" style={{ width: '100%' }}>
+                            {isRegister ? 'Register' : 'Login'}
+                        </button>
+                    </form>
+                }
+
+                <p style={{ marginTop: '1rem', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+                    {isRegister ? 'Already have an account?' : 'Need an account?'}
+                    <button
+                        onClick={() => setIsRegister(!isRegister)}
+                        style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', marginLeft: '0.5rem', fontWeight: 'bold' }}>
+                        {isRegister ? 'Login' : 'Register'}
+                    </button>
+                </p>
+            </div>
+        </div>
+    );
+};
+
+export default StaffLogin;

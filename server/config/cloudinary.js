@@ -1,8 +1,5 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const dotenv = require('dotenv');
-
-dotenv.config();
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -12,14 +9,14 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-        folder: 'resources',
-        allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'doc', 'docx', 'ppt', 'pptx'],
-        resource_type: 'auto' // Allow other file types like PDFs
-    }
+    params: async (req, file) => {
+        return {
+            folder: 'uni_connect_documents',
+            resource_type: 'auto', // Important for PDFs/Docs
+            // valid formats: must correspond to the file type or omit to keep original
+            // format: 'auto' is not always supported in multer-storage params directly like this, better to omit or calculate
+        };
+    },
 });
 
-module.exports = {
-    cloudinary,
-    storage
-};
+module.exports = { cloudinary, storage };

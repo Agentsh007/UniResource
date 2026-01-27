@@ -1,34 +1,18 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/server/server.js"
-    },
-    {
-      "source": "/assets/(.*)",
-      "destination": "/client/assets/$1"
-    },
-    {
-      "source": "/(.*)\\.(ico|png|jpg|jpeg|svg|json)",
-      "destination": "/client/$1.$2"
+      "destination": "/server/index.js"
     },
     {
       "source": "/(.*)",
       "destination": "/client/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "server/index.js": {
+      "maxDuration": 10
+    }
+  }
 }

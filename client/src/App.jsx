@@ -1,44 +1,83 @@
+import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import Landing from './pages/auth/Landing';
-import TeacherLogin from './pages/auth/TeacherLogin';
-import TeacherRegister from './pages/auth/TeacherRegister';
-import BatchLogin from './pages/auth/BatchLogin';
-// Placeholders for dashboard
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import StudentDashboard from './pages/student/StudentDashboard';
-import PrivateRoute from './components/PrivateRoute';
+import { AuthProvider, AuthContext } from './context/AuthContext';
+import Home from './pages/Home';
+import StaffLogin from './pages/StaffLogin';
+import BatchLogin from './pages/BatchLogin';
+import ChairmanDashboard from './pages/ChairmanDashboard';
+import ComputerOperatorDashboard from './pages/ComputerOperatorDashboard';
+import CCDashboard from './pages/CCDashboard';
+import TeacherDashboard from './pages/TeacherDashboard';
+import CoordinatorDashboard from './pages/CoordinatorDashboard'; // Imported
+import BatchDashboard from './pages/BatchDashboard';
+import BatchFiles from './pages/BatchFiles'; // Added back
+import { Loader } from './components/UI';
 
-import { Toaster } from 'react-hot-toast';
+import './App.css';
 
-function App() {
+const PrivateRoute = ({ children, role }) => {
+  const { user, loading } = useContext(AuthContext);
+
+  if (loading) return <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Loader /></div>;
+
+  if (!user) return <Navigate to="/" />;
+
+  // Role check
+  if (role && user.role !== role) {
+    // Handle redirect logic based on their actual role if they try accessing wrong route
+    if (user.role === 'CHAIRMAN') return <Navigate to="/chairman" />;
+    if (user.role === 'COORDINATOR') return <Navigate to="/coordinator" />; // Added
+    if (user.role === 'COMPUTER_OPERATOR') return <Navigate to="/operator" />;
+    if (user.role === 'CC') return <Navigate to="/cc" />;
+    if (user.role === 'TEACHER') return <Navigate to="/teacher" />;
+    if (user.role === 'BATCH') return <Navigate to="/batch" />;
+    return <Navigate to="/" />;
+  }
+
+  return children;
+};
+
+const App = () => {
   return (
     <AuthProvider>
       <Router>
-        <Toaster position="top-right" reverseOrder={false} />
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/teacher/login" element={<TeacherLogin />} />
-            <Route path="/teacher/register" element={<TeacherRegister />} />
-            <Route path="/student/login" element={<BatchLogin />} />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/staff-login" element={<StaffLogin />} />
+          <Route path="/batch-login" element={<BatchLogin />} />
 
-            {/* Protected Routes */}
-            <Route path="/teacher/dashboard/*" element={
-              <PrivateRoute role="TEACHER">
-                <TeacherDashboard />
-              </PrivateRoute>
-            } />
-            <Route path="/student/dashboard/*" element={
-              <PrivateRoute role="BATCH">
-                <StudentDashboard />
-              </PrivateRoute>
-            } />
-          </Routes>
-        </div>
+          <Route
+            path="/chairman"
+            element={<PrivateRoute role="CHAIRMAN"><ChairmanDashboard /></PrivateRoute>}
+          />
+          <Route
+            path="/coordinator"
+            element={<PrivateRoute role="COORDINATOR"><CoordinatorDashboard /></PrivateRoute>}
+          />
+          <Route
+            path="/operator"
+            element={<PrivateRoute role="COMPUTER_OPERATOR"><ComputerOperatorDashboard /></PrivateRoute>}
+          />
+          <Route
+            path="/cc"
+            element={<PrivateRoute role="CC"><CCDashboard /></PrivateRoute>}
+          />
+          <Route
+            path="/teacher"
+            element={<PrivateRoute role="TEACHER"><TeacherDashboard /></PrivateRoute>}
+          />
+          <Route
+            path="/batch/*"
+            element={<PrivateRoute role="BATCH"><BatchDashboard /></PrivateRoute>}
+          />
+          <Route
+            path="/batch/teacher/:teacherId"
+            element={<PrivateRoute role="BATCH"><BatchFiles /></PrivateRoute>}
+          />
+        </Routes>
       </Router>
     </AuthProvider>
   );
-}
+};
 
 export default App;

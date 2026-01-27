@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Editor Directories
+.vscode/
+.idea/
+.DS_Store
+
+# Build Output
+dist/
+build/
+
+# Temporary Files (Specific to this project)
+token.txt
+temp_token.txt
+user_id.txt
+test_upload.txt
+verify_chairman.js
+verify_cloudinary.js
+verify_login.js
+check_secrets.js
+mock-server.js
+test-db.js
+test-server.js
+test_cloudinary_direct.js
