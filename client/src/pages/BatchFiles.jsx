@@ -61,7 +61,7 @@ const BatchFiles = () => {
 
         // Fallback or local file (though local shouldn't happen with current config)
         if (!url.startsWith('http')) {
-            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const baseUrl = import.meta.env.VITE_API_URL || '';
             return `${baseUrl}/${url.replace(/\\/g, '/')}`;
         }
 
