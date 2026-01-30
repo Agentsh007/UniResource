@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../utils/axiosConfig';
 import { AuthContext } from '../context/AuthContext';
-import { FaTrash, FaFile, FaUser, FaCloudUploadAlt, FaList, FaBars, FaTimes, FaBullhorn } from 'react-icons/fa';
+import { FaTrash, FaFile, FaUser, FaCloudUploadAlt, FaList, FaBars, FaTimes, FaBullhorn, FaFolder, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { Loader, Toast } from '../components/UI';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 
@@ -33,6 +33,8 @@ const TeacherDashboard = () => {
 
     // Mobile Menu
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    const [viewingBatch, setViewingBatch] = useState(null);
 
     useEffect(() => {
         fetchBatches();
@@ -69,7 +71,7 @@ const TeacherDashboard = () => {
         setLoading(true);
         setMsg('');
         try {
-            await axios.post('/documents/upload', formData, {
+            await axios.post(`/documents/upload?target_batch_id=${selectedBatch}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setMsg('File Uploaded Successfully');
@@ -143,10 +145,17 @@ const TeacherDashboard = () => {
 
     if (!user) return null;
 
+    // Group docs by batch
+    const groupedDocs = myDocs.reduce((acc, doc) => {
+        const batchName = doc.target_batch?.batch_name || 'Uncategorized';
+        if (!acc[batchName]) acc[batchName] = [];
+        acc[batchName].push(doc);
+        return acc;
+    }, {});
+
     return (
         <Layout>
             <div className="container" style={{ maxWidth: '1000px' }}>
-
                 {/* Mobile Menu Toggle */}
                 <button
                     className="mobile-menu-toggle"
@@ -171,7 +180,7 @@ const TeacherDashboard = () => {
                             <FaBars /> CC Dashboard
                         </Link>
                     )}
-                    {/* Profile removed from here */}
+                    {renderTabButton('profile', 'Profile', <FaUser />)}
                     {renderTabButton('new-upload', 'New Upload', <FaCloudUploadAlt />)}
                     {renderTabButton('my-uploads', 'My Uploads', <FaList />)}
                     {renderTabButton('announcement', 'Announcements', <FaBullhorn />)}
@@ -302,26 +311,97 @@ const TeacherDashboard = () => {
 
                     {activeTab === 'my-uploads' && (
                         <div>
-                            <h3 style={{ marginBottom: '1.5rem' }}>My Uploaded Resources</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {myDocs.length === 0 ? <p style={{ textAlign: 'center', color: 'var(--text-dim)' }}>No uploads found.</p> :
-                                    myDocs.map(doc => (
-                                        <div key={doc._id} className="interactive-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <div style={{ background: 'var(--surface)', padding: '0.75rem', borderRadius: '10px' }}>
-                                                    <FaFile color="var(--primary)" size={20} />
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Batch: <span style={{ fontWeight: '500', color: 'var(--text-main)' }}>{doc.target_batch?.batch_name || 'Unknown'}</span></div>
-                                                </div>
-                                            </div>
-                                            <button onClick={() => deleteDoc(doc._id)} className="btn-icon" style={{ width: '36px', height: '36px', color: '#ef4444', background: '#fee2e2' }} title="Delete">
-                                                <FaTrash size={14} />
-                                            </button>
+                            {viewingBatch ? (
+                                <div className="fade-in">
+                                    <button
+                                        onClick={() => setViewingBatch(null)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.9rem', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}
+                                    >
+                                        <FaChevronDown style={{ transform: 'rotate(90deg)' }} /> Back to Folers
+                                    </button>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0' }}>
+                                        <div style={{ background: '#eff6ff', padding: '0.75rem', borderRadius: '12px' }}>
+                                            <FaFolder size={24} color="#3b82f6" />
                                         </div>
-                                    ))
-                                }
-                            </div>
+                                        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{viewingBatch}</h3>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', background: '#f1f5f9', padding: '0.2rem 0.6rem', borderRadius: '12px', marginLeft: 'auto' }}>
+                                            {groupedDocs[viewingBatch]?.length || 0} files
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {groupedDocs[viewingBatch]?.map(doc => (
+                                            <div key={doc._id} style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '1rem',
+                                                background: 'white',
+                                                borderRadius: '12px',
+                                                border: '1px solid #e2e8f0',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    <FaFile color="var(--text-dim)" size={18} />
+                                                    <div>
+                                                        <a href={doc.file_path} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'var(--text-main)', fontWeight: '500', marginBottom: '0.2rem' }}>
+                                                            {doc.original_filename}
+                                                        </a>
+                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                                                            {new Date(doc.upload_date).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); deleteDoc(doc._id); }}
+                                                    className="btn-icon"
+                                                    style={{ width: '32px', height: '32px', color: '#ef4444', background: '#fee2e2' }}
+                                                    title="Delete"
+                                                >
+                                                    <FaTrash size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h3 style={{ marginBottom: '1.5rem' }}>My Uploaded Resources</h3>
+                                    {myDocs.length === 0 ? (
+                                        <p style={{ textAlign: 'center', color: 'var(--text-dim)' }}>No uploads found.</p>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                                            {Object.entries(groupedDocs).map(([batchName, docs]) => (
+                                                <div
+                                                    key={batchName}
+                                                    onClick={() => setViewingBatch(batchName)}
+                                                    style={{
+                                                        background: 'white',
+                                                        border: '1px solid #e2e8f0',
+                                                        borderRadius: '16px',
+                                                        padding: '1.5rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        textAlign: 'center',
+                                                        userSelect: 'none'
+                                                    }}
+                                                    className="folder-card hover-lift"
+                                                >
+                                                    <div style={{ marginBottom: '1rem', color: '#3b82f6' }}>
+                                                        <FaFolder size={48} />
+                                                    </div>
+                                                    <div style={{ fontWeight: '600', color: 'var(--text-main)', marginBottom: '0.25rem' }}>{batchName}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{docs.length} files</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -374,7 +454,6 @@ const TeacherDashboard = () => {
                             }
                         </div>
                     )}
-
                 </div>
             </div>
         </Layout>

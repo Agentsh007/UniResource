@@ -1,35 +1,30 @@
 :root {
-  /* Gentle Color Palette (Soft Slate & Indigo) */
-  --bg-main: #f8fafc;
-  /* Slate 50 - Very soft cool grey for background */
-  --bg-card: #ffffff;
-  /* Pure white items */
+  /* Modern Palette (Navy & Orange) - Reference Inspired */
+  --bg-main: #f1f5f9;  /* Slate 100 - Clean light background */
+  --bg-card: #ffffff;  /* Pure white for cards */
 
-  --primary: #6366f1;
-  /* Indigo 500 - Trusted, calm primary */
-  --primary-light: #818cf8;
-  /* Indigo 400 - For hovers/accents */
-  --primary-fade: rgba(99, 102, 241, 0.1);
-  /* Very subtle background fill */
+  --primary: #f97316;  /* Orange 500 - Vibrant primary accent */
+  --primary-light: #fb923c; /* Orange 400 - Hover state */
+  --primary-fade: rgba(249, 115, 22, 0.1); /* Subtle orange fill */
 
-  --text-main: #334155;
-  /* Slate 700 - Softer than black, high contrast */
-  --text-dim: #64748b;
-  /* Slate 500 - Gentle secondary text */
+  --sidebar-bg: #0f172a; /* Slate 900 - Deep Navy for Sidebar/Nav */
+  --sidebar-text: #f8fafc; /* Slate 50 - White text on dark bg */
 
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  /* Frosty white */
-  --glass-border: rgba(226, 232, 240, 0.6);
-  /* Slate 200 */
-  --shadow-soft: 0 4px 20px -2px rgba(94, 114, 228, 0.1);
-  --shadow-hover: 0 10px 25px -5px rgba(94, 114, 228, 0.2);
+  --text-main: #1e293b; /* Slate 800 - High contrast text */
+  --text-dim: #64748b;  /* Slate 500 - Secondary text */
+  
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(226, 232, 240, 0.8);
+  
+  --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
 
   --success: #10b981;
   --error: #ef4444;
   --font-main: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
 
-  --radius-lg: 20px;
-  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-md: 10px;
 }
 
 body {

@@ -4,7 +4,9 @@
     "description": "Root package config for Vercel deployment",
     "scripts": {
         "build": "cd client && npm install && npm run build",
-        "postinstall": "cd client && npm install"
+        "postinstall": "cd client && npm install",
+        "reset-system": "node reset_system.js",
+        "seed": "node seed_data.js"
     },
     "dependencies": {
         "bcryptjs": "^3.0.3",

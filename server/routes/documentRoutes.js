@@ -7,17 +7,18 @@ const auth = require('../middleware/authMiddleware');
 const Document = require('../models/Document');
 const User = require('../models/User');
 
-const { storage, cloudinary } = require('../config/cloudinary');
+const { cloudinary } = require('../config/cloudinary');
+const Batch = require('../models/Batch');
 
-// Multer Config
+// Multer Config (Memory Storage)
+const storage = multer.memoryStorage();
 const upload = multer({
     storage,
-    limits: { fileSize: 10000000 }, // 10MB
+    limits: { fileSize: 10000000 },
     fileFilter: (req, file, cb) => {
         const filetypes = /jpeg|jpg|png|pdf|doc|docx|ppt|pptx/;
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = filetypes.test(file.mimetype);
-        // Basic check, Cloudinary handles most validation too but good to keep
         if (mimetype || extname) {
             return cb(null, true);
         } else {
@@ -37,21 +38,62 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ msg: 'No file uploaded' });
 
     try {
-        console.log('File uploaded to Cloudinary:', req.file);
-        console.log('Body:', req.body);
-        const newDoc = new Document({
-            file_path: req.file.path, // Cloudinary URL
-            cloudinary_id: req.file.filename, // Cloudinary Public ID
-            original_filename: req.file.originalname,
-            uploaded_by: req.user.id,
-            target_batch: req.body.target_batch_id
-        });
+        // Determine folder name based on batch
+        let folderName = 'general';
+        const batchId = req.query.target_batch_id || req.body.target_batch_id;
 
-        const doc = await newDoc.save();
-        res.json(doc);
+        if (batchId) {
+            const batch = await Batch.findById(batchId);
+            if (!batch) {
+                return res.status(400).json({ msg: 'Invalid Batch ID. Please refresh the page to get the latest batch list.' });
+            }
+            if (batch.batch_name) {
+                folderName = batch.batch_name.trim().replace(/[^a-zA-Z0-9]/g, '_');
+            }
+        }
+
+        // Upload to Cloudinary using Stream
+        // For raw files, explicit public_id is more reliable for folder structure
+        const timestamp = Math.floor(Date.now() / 1000);
+        const cleanFileName = req.file.originalname.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
+        const fullPublicId = `uni_connect_documents/${folderName}/${cleanFileName}_${timestamp}`;
+
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                public_id: fullPublicId,
+                resource_type: 'auto'
+            },
+            async (error, result) => {
+                if (error) {
+                    console.error('Cloudinary Upload Error:', error);
+                    return res.status(500).json({ msg: 'Cloudinary Upload Failed', error });
+                }
+
+                try {
+                    const newDoc = new Document({
+                        file_path: result.secure_url,
+                        cloudinary_id: result.public_id,
+                        original_filename: req.file.originalname,
+                        uploaded_by: req.user.id,
+                        target_batch: batchId || undefined // Save batch ref if exists
+                    });
+
+                    const doc = await newDoc.save();
+                    res.json(doc);
+                } catch (dbErr) {
+                    console.error('Database Save Error:', dbErr);
+                    res.status(500).json({ msg: 'Database Error', error: dbErr.message });
+                }
+            }
+        );
+
+        // Pipe buffer to stream
+        const bufferStream = require('stream').PassThrough();
+        bufferStream.end(req.file.buffer);
+        bufferStream.pipe(uploadStream);
+
     } catch (err) {
-        console.error('Upload Route Error:', JSON.stringify(err, null, 2));
-        console.error(err.stack);
+        console.error('Upload Route Error:', err);
         res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });

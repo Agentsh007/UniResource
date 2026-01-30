@@ -239,7 +239,7 @@ router.get('/teachers', auth, async (req, res) => {
         return res.status(403).json({ msg: 'Access denied' });
     }
     try {
-        const teachers = await User.find({ role: 'TEACHER' }).select('-password');
+        const teachers = await User.find({ role: { $in: ['TEACHER', 'CC'] } }).select('-password').populate('assigned_batch', 'batch_name');
         res.json(teachers);
     } catch (err) {
         console.error(err);
@@ -262,14 +262,40 @@ router.put('/assign-cc', auth, async (req, res) => {
         }
 
         teacher.assigned_batch = batch_id;
-        // Optionally update role to CC? No, kept as TEACHER per plan.
+        teacher.role = 'CC'; // Promote to CC
 
         await teacher.save();
-        res.json({ msg: 'Teacher assigned as CC successfully', teacher });
+        res.json({ msg: 'Teacher promoted to CC successfully', teacher });
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
     }
 });
+
+// @route   PUT api/auth/remove-cc
+// @desc    Remove CC role from teacher
+// @access  Chairman Only
+router.put('/remove-cc', auth, async (req, res) => {
+    if (req.user.role !== 'CHAIRMAN') {
+        return res.status(403).json({ msg: 'Access denied' });
+    }
+    const { teacher_id } = req.body;
+    try {
+        const teacher = await User.findById(teacher_id);
+        if (!teacher) {
+            return res.status(404).json({ msg: 'Teacher not found' });
+        }
+
+        teacher.assigned_batch = null;
+        teacher.role = 'TEACHER'; // Demote to Teacher
+
+        await teacher.save();
+        res.json({ msg: 'CC revoked successfully', teacher });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
 
 module.exports = router;

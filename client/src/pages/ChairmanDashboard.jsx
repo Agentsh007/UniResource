@@ -221,7 +221,7 @@ const ChairmanDashboard = () => {
 
                     {activeTab === 'assign-staff' && (
                         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Assign Staff</h3>
+                            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Assign Staff (CC / Operator)</h3>
 
                             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
                                 <button onClick={() => setStaffForm(s => ({ ...s, role: 'CC' }))} className={`btn-tab ${staffForm.role === 'CC' ? 'active' : ''}`} style={{ flex: 1, padding: '1rem', borderRadius: '8px', border: staffForm.role === 'CC' ? '2px solid var(--primary)' : '1px solid #ddd', background: staffForm.role === 'CC' ? 'var(--primary-fade)' : 'white' }}>Assign Class Coordinator</button>
@@ -229,43 +229,86 @@ const ChairmanDashboard = () => {
                             </div>
 
                             {staffForm.role === 'CC' ? (
-                                <form onSubmit={assignCC}>
-                                    <p style={{ color: 'var(--text-dim)', marginBottom: '1.5rem', textAlign: 'center' }}>
-                                        Promote an existing Teacher to Class Coordinator for a specific batch.
-                                    </p>
+                                <div>
+                                    <form onSubmit={assignCC} style={{ marginBottom: '3rem' }}>
+                                        <p style={{ color: 'var(--text-dim)', marginBottom: '1.5rem', textAlign: 'center' }}>
+                                            Promote a Teacher to Class Coordinator.
+                                        </p>
 
-                                    <div style={{ marginBottom: '1rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select Teacher</label>
-                                        <select
-                                            value={staffForm.teacher_id}
-                                            onChange={e => setStaffForm({ ...staffForm, teacher_id: e.target.value })}
-                                            required
-                                            style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd' }}
-                                        >
-                                            <option value="">-- Select Faculty --</option>
-                                            {teachers.map(t => (
-                                                <option key={t._id} value={t._id}>{t.full_name} ({t.email})</option>
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select Teacher</label>
+                                            <select
+                                                value={staffForm.teacher_id}
+                                                onChange={e => setStaffForm({ ...staffForm, teacher_id: e.target.value })}
+                                                required
+                                                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                            >
+                                                <option value="">-- Select Faculty --</option>
+                                                {teachers.filter(t => t.role === 'TEACHER').map(t => (
+                                                    <option key={t._id} value={t._id}>{t.full_name} ({t.email})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div style={{ marginBottom: '1.5rem' }}>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}> Assign to Batch</label>
+                                            <select
+                                                value={staffForm.batch_id}
+                                                onChange={e => setStaffForm({ ...staffForm, batch_id: e.target.value })}
+                                                required
+                                                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                            >
+                                                <option value="">-- Select Batch --</option>
+                                                {batches.map(b => (
+                                                    <option key={b._id} value={b._id}>{b.batch_name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>Assign as CC</button>
+                                    </form>
+
+                                    <h4 style={{ marginBottom: '1rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>Current Class Coordinators</h4>
+                                    {teachers.filter(t => t.role === 'CC').length === 0 ? (
+                                        <p style={{ color: 'var(--text-dim)', textAlign: 'center' }}>No Active CCs.</p>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            {teachers.filter(t => t.role === 'CC').map(cc => (
+                                                <div key={cc._id} style={{
+                                                    padding: '1rem', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0',
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                                }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: '600' }}>{cc.full_name}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{cc.email}</div>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--primary)', marginTop: '0.2rem' }}>
+                                                            Batch: {cc.assigned_batch?.batch_name || 'N/A'}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!window.confirm(`Revoke CC access for ${cc.full_name}?`)) return;
+                                                            setLoading(true);
+                                                            try {
+                                                                await axios.put('/auth/remove-cc', { teacher_id: cc._id });
+                                                                showToast('CC Access Revoked', 'success');
+                                                                fetchTeachers();
+                                                            } catch (err) {
+                                                                showToast('Revoke Failed', 'error');
+                                                            } finally {
+                                                                setLoading(false);
+                                                            }
+                                                        }}
+                                                        className="btn-secondary"
+                                                        style={{ color: '#ef4444', fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
                                             ))}
-                                        </select>
-                                    </div>
-
-                                    <div style={{ marginBottom: '1.5rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}> Assign to Batch</label>
-                                        <select
-                                            value={staffForm.batch_id}
-                                            onChange={e => setStaffForm({ ...staffForm, batch_id: e.target.value })}
-                                            required
-                                            style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd' }}
-                                        >
-                                            <option value="">-- Select Batch --</option>
-                                            {batches.map(b => (
-                                                <option key={b._id} value={b._id}>{b.batch_name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>Assign as CC</button>
-                                </form>
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
                                 <form onSubmit={createStaff}>
                                     <p style={{ color: 'var(--text-dim)', marginBottom: '1.5rem', textAlign: 'center' }}>
