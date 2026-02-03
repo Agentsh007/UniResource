@@ -1,75 +1,56 @@
 const axios = require('axios');
-const FormData = require('form-data');
 const fs = require('fs');
+const FormData = require('form-data');
 const path = require('path');
 
+// Test Config
 const API_URL = 'http://localhost:5000/api';
-let token = '';
+const TEACHER_EMAIL = 'teacher@example.com'; // Replace with a valid teacher email
+const TEACHER_PASSWORD = 'password';         // Replace with valid password
+const TEST_FILE_PATH = 'test_upload.txt';   // Create a dummy file
 
-async function login() {
+// Create dummy file
+fs.writeFileSync(TEST_FILE_PATH, 'This is a test document content.');
+
+async function testUpload() {
     try {
-        const res = await axios.post(`${API_URL}/auth/login`, {
-            email: 'teacher@example.com', // Assuming this user exists from previous context
-            password: 'password123'
+        console.log('1. Logging in as Teacher...');
+        const loginRes = await axios.post(`${API_URL}/auth/login`, {
+            email: TEACHER_EMAIL,
+            password: TEACHER_PASSWORD
         });
-        token = res.data.token;
-        console.log('Login successful');
-        return true;
-    } catch (err) {
-        console.error('Login failed:', err.response?.data || err.message);
-        return false;
-    }
-}
+        const token = loginRes.data.token;
+        console.log('   Login successful. Token obtained.');
 
-async function uploadFile() {
-    try {
-        // Create a dummy PDF file
-        const filePath = path.join(__dirname, 'test_debug.pdf');
-        fs.writeFileSync(filePath, 'This is a test PDF content');
+        // Get a batch ID first (optional, or send without batch if allowed? Schema says target_batch is ref, might be required?)
+        // Document Schema: target_batch: { type: ObjectId, ref: 'Batch' }
+        // Let's assume we need a batch ID.
+        // We can create a dummy batch or fetch one.
+        // For now, let's try upload without batch ID or with a hardcoded one if we know it.
+        // Or better, fetch batches first. But Teacher can't fetch batches? 
+        // Wait, Teacher Dashboard fetches batches? 
+        // Let's try to upload with NO batch ID first (if allowed).
 
+        console.log('2. Uploading Document...');
         const formData = new FormData();
-        formData.append('file', fs.createReadStream(filePath));
-        // We'll skip target_batch_id for now or fetch one if needed, 
-        // but the route allows it to be optional or handles it.
-        // Actually the route tries to fetch batch if ID is present.
-        // Let's see if we can get a batch first.
+        formData.append('file', fs.createReadStream(TEST_FILE_PATH));
+        // formData.append('target_batch_id', 'some_id');
 
-        let batchId = '';
-        try {
-            const batches = await axios.get(`${API_URL}/batches`, { headers: { 'x-auth-token': token } });
-            if (batches.data.length > 0) {
-                batchId = batches.data[0]._id;
-                formData.append('target_batch_id', batchId);
-                console.log('Using batch:', batches.data[0].batch_name);
-            }
-        } catch (e) {
-            console.log('Could not fetch batches, proceeding without batch ID');
-        }
-
-        const res = await axios.post(`${API_URL}/documents/upload`, formData, {
+        const uploadRes = await axios.post(`${API_URL}/documents/upload`, formData, {
             headers: {
-                ...formData.getHeaders(),
-                'x-auth-token': token
-            },
-            params: { target_batch_id: batchId }
+                'x-auth-token': token,
+                ...formData.getHeaders()
+            }
         });
 
-        console.log('Upload Result Status:', res.status);
-        console.log('File Path:', res.data.file_path);
-        console.log('Cloudinary ID:', res.data.cloudinary_id);
-
-        // Cleanup
-        fs.unlinkSync(filePath);
+        console.log('   Upload successful:', uploadRes.data);
 
     } catch (err) {
-        console.error('Upload failed:', err.response?.data || err.message);
+        console.error('   Upload Failed:', err.response ? err.response.data : err.message);
+    } finally {
+        // Cleanup
+        if (fs.existsSync(TEST_FILE_PATH)) fs.unlinkSync(TEST_FILE_PATH);
     }
 }
 
-async function run() {
-    if (await login()) {
-        await uploadFile();
-    }
-}
-
-run();
+testUpload();

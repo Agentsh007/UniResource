@@ -3,11 +3,12 @@ import axios from '../utils/axiosConfig';
 import { AuthContext } from '../context/AuthContext';
 import { Layout } from '../components/Layout';
 import { Loader, Toast } from '../components/UI';
-import { FaBullhorn, FaHistory } from 'react-icons/fa';
+import { FaBullhorn, FaHistory, FaPaperclip, FaTrash } from 'react-icons/fa';
 
 const ComputerOperatorDashboard = () => {
     const { user, loading: authLoading } = useContext(AuthContext);
     const [noticeForm, setNoticeForm] = useState({ title: '', content: '' });
+    const [file, setFile] = useState(null);
     const [myNotices, setMyNotices] = useState([]);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
@@ -37,14 +38,39 @@ const ComputerOperatorDashboard = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await axios.post('/announcements', { ...noticeForm, type: 'NOTICE', target_batch: null });
+            const formData = new FormData();
+            formData.append('title', noticeForm.title);
+            formData.append('content', noticeForm.content);
+            formData.append('type', 'NOTICE');
+            if (file) {
+                formData.append('file', file);
+            }
+
+            await axios.post('/announcements', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
             showToast('Notice Posted Successfully', 'success');
             setNoticeForm({ title: '', content: '' });
+            setFile(null);
             fetchNotices();
         } catch (err) {
+            console.error(err);
             showToast('Failed to post notice', 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const deleteNotice = async (id) => {
+        if (!window.confirm('Delete this notice?')) return;
+        try {
+            await axios.delete(`/announcements/${id}`);
+            showToast('Notice deleted', 'success');
+            fetchNotices();
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to delete notice', 'error');
         }
     };
 
@@ -72,6 +98,10 @@ const ComputerOperatorDashboard = () => {
                         <div style={{ marginBottom: '1.5rem' }}>
                             <textarea rows="5" placeholder="Notice Details..." value={noticeForm.content} onChange={e => setNoticeForm({ ...noticeForm, content: e.target.value })} required style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd', resize: 'vertical', fontSize: '1rem' }}></textarea>
                         </div>
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Attach Document (PDF/Image - Optional)</label>
+                            <input type="file" onChange={e => setFile(e.target.files[0])} accept=".pdf,.doc,.docx,.jpg,.png" style={{ width: '100%' }} />
+                        </div>
                         <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%' }}>Publish Notice</button>
                     </form>
                 </div>
@@ -82,18 +112,33 @@ const ComputerOperatorDashboard = () => {
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {myNotices.map(n => (
-                            <div key={n._id} className="interactive-card" style={{ padding: '1.5rem', background: 'white', borderRadius: '12px', borderLeft: '4px solid #f59e0b', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.5rem' }}>{n.title}</div>
+                            <div key={n._id} className="interactive-card" style={{ padding: '1.5rem', background: 'white', borderRadius: '12px', borderLeft: '4px solid #f59e0b', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'relative' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.5rem' }}>{n.title}</div>
+                                    {/* Show delete button only if I am the author */}
+                                    {user && n.author && user.id === n.author._id && (
+                                        <button onClick={() => deleteNotice(n._id)} className="btn-icon" style={{ color: '#ef4444', background: '#fee2e2', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <FaTrash />
+                                        </button>
+                                    )}
+                                </div>
                                 <p style={{ color: 'var(--text-main)', margin: '0 0 0.5rem 0', whiteSpace: 'pre-wrap' }}>{n.content}</p>
                                 <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-                                    Posted by: {n.author.full_name} on {new Date(n.created_at).toLocaleDateString()}
+                                    Posted by: {n.author ? n.author.full_name : 'Unknown User'} on {new Date(n.created_at).toLocaleDateString()}
                                 </div>
+                                {
+                                    n.file_url && (
+                                        <a href={n.file_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', color: '#f59e0b', textDecoration: 'none', fontWeight: '500', padding: '0.5rem 1rem', background: '#fffbeb', borderRadius: '6px' }}>
+                                            <FaPaperclip /> View Attached Document
+                                        </a>
+                                    )
+                                }
                             </div>
                         ))}
                     </div>
                 </div>
             </div>
-        </Layout>
+        </Layout >
     );
 };
 

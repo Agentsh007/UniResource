@@ -65,11 +65,8 @@ const CCDashboard = () => {
                 {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
                 <header style={{ marginBottom: '3rem', textAlign: 'center' }}>
-                    <h1 style={{ color: 'var(--primary)' }}>Class Coordinator {user.assigned_batch ? '(Teacher Mode)' : ''}</h1>
+                    <h1 style={{ color: 'var(--primary)' }}>Class Coordinator</h1>
                     <p style={{ color: 'var(--text-dim)' }}>Batch Announcements & Notifications</p>
-                    {user.role === 'TEACHER' && (
-                        <Link to="/teacher-dashboard" style={{ display: 'inline-block', marginTop: '1rem', color: 'var(--primary)', fontWeight: '600' }}>&larr; Back to Faculty Dashboard</Link>
-                    )}
                 </header>
 
                 <div className="glass-panel fade-in">

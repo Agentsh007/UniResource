@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from '../utils/axiosConfig';
 import { AuthContext } from '../context/AuthContext';
 import { FaTrash, FaFile, FaUser, FaCloudUploadAlt, FaList, FaBars, FaTimes, FaBullhorn, FaFolder, FaChevronDown, FaChevronRight } from 'react-icons/fa';
-import { Loader, Toast } from '../components/UI';
+import { Loader, Toast, ConfirmModal } from '../components/UI';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 
 import { Layout } from '../components/Layout';
@@ -18,6 +18,10 @@ const TeacherDashboard = () => {
     const [file, setFile] = useState(null);
     const [msg, setMsg] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Modal State
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isDanger: false });
+    const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
     // Handle URL Queries
     useEffect(() => {
@@ -84,14 +88,23 @@ const TeacherDashboard = () => {
         }
     };
 
-    const deleteDoc = async (id) => {
-        if (!window.confirm('Delete this file?')) return;
-        try {
-            await axios.delete(`/documents/${id}`);
-            fetchMyDocs();
-        } catch (err) {
-            alert('Delete failed');
-        }
+    const deleteDoc = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Delete File?',
+            message: 'Are you sure you want to delete this file? This action cannot be undone.',
+            isDanger: true,
+            onConfirm: async () => {
+                try {
+                    await axios.delete(`/documents/${id}`);
+                    fetchMyDocs();
+                } catch (err) {
+                    alert('Delete failed');
+                } finally {
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
     const updateProfile = async (e) => {
@@ -108,36 +121,27 @@ const TeacherDashboard = () => {
         }
     };
 
-    const deleteAccount = async () => {
-        if (!window.confirm('Are you ABSOLUTELY SURE? This will delete your account and all files permanently.')) return;
-        try {
-            await axios.delete('/auth/profile');
-            alert('Account deleted.');
-            window.location.href = '/';
-        } catch (err) {
-            alert('Delete failed');
-        }
+    const deleteAccount = () => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Delete Account?',
+            message: 'Are you ABSOLUTELY SURE? This will delete your account and all files permanently.',
+            isDanger: true,
+            onConfirm: async () => {
+                try {
+                    await axios.delete('/auth/profile');
+                    alert('Account deleted.');
+                    window.location.href = '/';
+                } catch (err) {
+                    alert('Delete failed');
+                } finally {
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
-    const renderTabButton = (id, label, icon) => (
-        <button
-            onClick={() => { navigate(`?tab=${id}`); setMobileMenuOpen(false); }}
-            className={`btn-tab ${activeTab === id ? 'active' : ''}`}
-            style={{
-                padding: '0.75rem 1.5rem',
-                borderRadius: '12px',
-                border: 'none',
-                background: activeTab === id ? 'var(--primary)' : 'var(--surface)',
-                color: activeTab === id ? 'white' : 'var(--text-main)',
-                cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: '0.2s',
-                fontSize: '1rem'
-            }}
-        >
-            {icon} {label}
-        </button>
-    );
+
 
     if (authLoading) {
         return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Loader /></div>;
@@ -156,302 +160,333 @@ const TeacherDashboard = () => {
     return (
         <Layout>
             <div className="container" style={{ maxWidth: '1000px' }}>
-                {/* Mobile Menu Toggle */}
-                <button
-                    className="mobile-menu-toggle"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        {mobileMenuOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
-                        <span>Menu</span>
-                    </div>
-                </button>
-
-                {/* Overlay */}
-                <div
-                    className={`menu-overlay ${mobileMenuOpen ? 'open' : ''}`}
-                    onClick={() => setMobileMenuOpen(false)}
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={closeConfirmModal}
+                    onConfirm={confirmModal.onConfirm}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    isDanger={confirmModal.isDanger}
                 />
-
-                {/* Tab Menu */}
-                <div className={`tab-menu ${mobileMenuOpen ? 'open' : ''}`} style={{ marginBottom: '2rem' }}>
-                    {user.assigned_batch && (
-                        <Link to="/cc-dashboard" className="btn-tab" style={{ background: '#f59e0b', color: 'white', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
-                            <FaBars /> CC Dashboard
-                        </Link>
-                    )}
-                    {renderTabButton('profile', 'Profile', <FaUser />)}
-                    {renderTabButton('new-upload', 'New Upload', <FaCloudUploadAlt />)}
-                    {renderTabButton('my-uploads', 'My Uploads', <FaList />)}
-                    {renderTabButton('announcement', 'Announcements', <FaBullhorn />)}
-                </div>
-
-                <div className="glass-panel fade-in" style={{ minHeight: '400px' }}>
+                <div className="fade-in" style={{ minHeight: '400px' }}>
 
                     {activeTab === 'profile' && (
-                        <div style={{ padding: '0 0.5rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-                                <div>
-                                    <h2 style={{ fontSize: '1.8rem', color: 'var(--text-main)', marginBottom: '0.25rem' }}>Faculty Profile</h2>
-                                    <p style={{ color: 'var(--text-dim)' }}>Manage your faculty details.</p>
+                        <div style={{ background: 'white', padding: '2rem', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', border: '1px solid #e2e8f0' }}>
+                            <div style={{ padding: '0 0.5rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                                    <div>
+                                        <h2 style={{ fontSize: '1.8rem', color: 'var(--text-main)', marginBottom: '0.25rem' }}>Faculty Profile</h2>
+                                        <p style={{ color: 'var(--text-dim)' }}>Manage your faculty details.</p>
+                                    </div>
+                                    {!editMode && (
+                                        <button
+                                            onClick={() => { setEditData({ full_name: user.name, email: user.email, department: user.department || '' }); setEditMode(true); }}
+                                            className="btn-secondary"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
+                                        >
+                                            Edit Profile
+                                        </button>
+                                    )}
                                 </div>
-                                {!editMode && (
-                                    <button
-                                        onClick={() => { setEditData({ full_name: user.name, email: user.email, department: user.department || '' }); setEditMode(true); }}
-                                        className="btn-secondary"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
-                                    >
-                                        Edit Profile
-                                    </button>
+
+                                {editMode ? (
+                                    <form onSubmit={updateProfile} style={{ background: '#f8fafc', padding: '2rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', maxWidth: '600px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>Full Name</label>
+                                                <input type="text" value={editData.full_name} onChange={e => setEditData({ ...editData, full_name: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>Email</label>
+                                                <input type="email" value={editData.email} onChange={e => setEditData({ ...editData, email: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>Department</label>
+                                                <input type="text" value={editData.department} onChange={e => setEditData({ ...editData, department: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                                <button type="submit" className="btn-primary" style={{ padding: '0.75rem 1.5rem' }}>Save Changes</button>
+                                                <button type="button" onClick={() => setEditMode(false)} className="btn-secondary" style={{ padding: '0.75rem 1.5rem', background: 'white', border: '1px solid #cbd5e1' }}>Cancel</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+                                            <div className="profile-card-item" style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                                <label style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'block' }}>Full Name</label>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-main)' }}>{user.name}</div>
+                                            </div>
+                                            <div className="profile-card-item" style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                                <label style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'block' }}>Email Address</label>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-main)' }}>{user.email}</div>
+                                            </div>
+                                            <div className="profile-card-item" style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                                <label style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'block' }}>Role</label>
+                                                <div><span className="badge badge-primary" style={{ fontSize: '1rem', padding: '0.4rem 0.8rem' }}>{user.role}</span></div>
+                                            </div>
+                                            <div className="profile-card-item" style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                                <label style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'block' }}>Department</label>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-main)' }}>{user.department || 'Not Specified'}</div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '2rem' }}>
+                                            <h3 style={{ fontSize: '1.1rem', color: '#ef4444', marginBottom: '1rem' }}>Danger Zone</h3>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef2f2', padding: '1.5rem', borderRadius: '12px', border: '1px solid #fecaca' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: '600', color: '#991b1b', marginBottom: '0.25rem' }}>Delete Account</div>
+                                                    <div style={{ fontSize: '0.9rem', color: '#b91c1c' }}>Permanently remove your account and all associated data.</div>
+                                                </div>
+                                                <button
+                                                    onClick={deleteAccount}
+                                                    className="btn-icon"
+                                                    style={{ background: '#ef4444', color: 'white', padding: '0.75rem 1.5rem', width: 'auto', borderRadius: '8px', border: 'none', fontWeight: '600', cursor: 'pointer' }}
+                                                >
+                                                    Delete Account
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
-
-                            {editMode ? (
-                                <form onSubmit={updateProfile} style={{ background: '#f8fafc', padding: '2rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', maxWidth: '600px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>Full Name</label>
-                                            <input type="text" value={editData.full_name} onChange={e => setEditData({ ...editData, full_name: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>Email</label>
-                                            <input type="email" value={editData.email} onChange={e => setEditData({ ...editData, email: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>Department</label>
-                                            <input type="text" value={editData.department} onChange={e => setEditData({ ...editData, department: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                            <button type="submit" className="btn-primary" style={{ padding: '0.75rem 1.5rem' }}>Save Changes</button>
-                                            <button type="button" onClick={() => setEditMode(false)} className="btn-secondary" style={{ padding: '0.75rem 1.5rem', background: 'white', border: '1px solid #cbd5e1' }}>Cancel</button>
-                                        </div>
-                                    </div>
-                                </form>
-                            ) : (
-                                <div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                                        <div className="profile-card-item" style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                                            <label style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'block' }}>Full Name</label>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-main)' }}>{user.name}</div>
-                                        </div>
-                                        <div className="profile-card-item" style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                                            <label style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'block' }}>Email Address</label>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-main)' }}>{user.email}</div>
-                                        </div>
-                                        <div className="profile-card-item" style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                                            <label style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'block' }}>Role</label>
-                                            <div><span className="badge badge-primary" style={{ fontSize: '1rem', padding: '0.4rem 0.8rem' }}>{user.role}</span></div>
-                                        </div>
-                                        <div className="profile-card-item" style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                                            <label style={{ color: 'var(--text-dim)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem', display: 'block' }}>Department</label>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: '600', color: 'var(--text-main)' }}>{user.department || 'Not Specified'}</div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '2rem' }}>
-                                        <h3 style={{ fontSize: '1.1rem', color: '#ef4444', marginBottom: '1rem' }}>Danger Zone</h3>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fef2f2', padding: '1.5rem', borderRadius: '12px', border: '1px solid #fecaca' }}>
-                                            <div>
-                                                <div style={{ fontWeight: '600', color: '#991b1b', marginBottom: '0.25rem' }}>Delete Account</div>
-                                                <div style={{ fontSize: '0.9rem', color: '#b91c1c' }}>Permanently remove your account and all associated data.</div>
-                                            </div>
-                                            <button
-                                                onClick={deleteAccount}
-                                                className="btn-icon"
-                                                style={{ background: '#ef4444', color: 'white', padding: '0.75rem 1.5rem', width: 'auto', borderRadius: '8px', border: 'none', fontWeight: '600', cursor: 'pointer' }}
-                                            >
-                                                Delete Account
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     )}
 
                     {activeTab === 'new-upload' && (
-                        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Upload New Resource</h3>
-                            {msg && <p style={{ textAlign: 'center', color: msg.includes('Success') ? 'var(--success)' : 'var(--error)', marginBottom: '1rem' }}>{msg}</p>}
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0' }}>
+                            <div className="fade-in" style={{
+                                width: '100%',
+                                maxWidth: '600px',
+                                background: 'white',
+                                padding: '3rem',
+                                borderRadius: '20px',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                border: '1px solid #e2e8f0',
+                                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                            }}
+                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'; }}
+                            >
+                                {msg && <p style={{ textAlign: 'center', color: msg.includes('Success') ? 'var(--success)' : 'var(--error)', marginBottom: '1.5rem', fontWeight: '500', padding: '0.75rem', borderRadius: '8px', background: msg.includes('Success') ? '#f0fdf4' : '#fef2f2' }}>{msg}</p>}
 
-                            {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader /></div> :
-                                batches.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-dim)' }}>
-                                        <p>No batches found. Please ask the Coordinator to create a batch first.</p>
-                                    </div>
-                                ) : (
-                                    <form onSubmit={handleUpload}>
-                                        <div style={{ marginBottom: '1rem' }}>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Target Batch</label>
-                                            <select
-                                                value={selectedBatch}
-                                                onChange={e => setSelectedBatch(e.target.value)}
-                                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
-                                            >
-                                                {batches?.map(b => (
-                                                    <option key={b._id} value={b._id}>{b.batch_name}</option>
-                                                ))}
-                                            </select>
+                                {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}><Loader /></div> :
+                                    batches.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-dim)' }}>
+                                            <div style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}><FaList size={40} /></div>
+                                            <p>No batches found. Please ask the Coordinator to create a batch first.</p>
                                         </div>
-
-                                        <div style={{ marginBottom: '1.5rem' }}>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select Document</label>
-                                            <div style={{ border: '2px dashed #ddd', padding: '2rem', borderRadius: '12px', textAlign: 'center', cursor: 'pointer', background: '#f8fafc' }} onClick={() => document.getElementById('fileInput').click()}>
-                                                {file ? <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{file.name}</span> : <span style={{ color: 'var(--text-dim)' }}>Click to browse file</span>}
+                                    ) : (
+                                        <form onSubmit={handleUpload}>
+                                            <div style={{ marginBottom: '1.5rem' }}>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-main)' }}>Target Batch</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <select
+                                                        value={selectedBatch}
+                                                        onChange={e => setSelectedBatch(e.target.value)}
+                                                        style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '1rem', color: 'var(--text-main)', appearance: 'none', background: 'white' }}
+                                                    >
+                                                        {batches?.map(b => (
+                                                            <option key={b._id} value={b._id}>{b.batch_name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <FaChevronDown style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)', pointerEvents: 'none' }} />
+                                                </div>
                                             </div>
-                                            <input id="fileInput" type="file" onChange={e => setFile(e.target.files[0])} style={{ display: 'none' }} />
-                                        </div>
 
-                                        <button type="submit" className="btn-primary" style={{ width: '100%' }}>Upload Resource</button>
-                                    </form>
-                                )
-                            }
+                                            <div style={{ marginBottom: '2rem' }}>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-main)' }}>Select Document</label>
+                                                <div
+                                                    style={{ border: '2px dashed #cbd5e1', padding: '3rem 2rem', borderRadius: '16px', textAlign: 'center', cursor: 'pointer', background: '#f8fafc', transition: 'all 0.2s' }}
+                                                    onClick={() => document.getElementById('fileInput').click()}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = '#fff7ed'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
+                                                >
+                                                    <div style={{ marginBottom: '0.5rem', color: 'var(--primary)' }}><FaCloudUploadAlt size={48} /></div>
+                                                    {file ? (
+                                                        <div style={{ fontWeight: '600', color: 'var(--text-main)', wordBreak: 'break-all' }}>{file.name}</div>
+                                                    ) : (
+                                                        <div style={{ color: 'var(--text-dim)', fontWeight: '500' }}>Click to browse file</div>
+                                                    )}
+                                                </div>
+                                                <input id="fileInput" type="file" onChange={e => setFile(e.target.files[0])} style={{ display: 'none' }} />
+                                            </div>
+
+                                            <button
+                                                type="submit"
+                                                className="btn-primary"
+                                                style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', borderRadius: '12px', boxShadow: '0 4px 6px rgba(249, 115, 22, 0.2)' }}
+                                            >
+                                                Upload Resource
+                                            </button>
+                                        </form>
+                                    )
+                                }
+                            </div>
                         </div>
                     )}
 
                     {activeTab === 'my-uploads' && (
-                        <div>
-                            {viewingBatch ? (
-                                <div className="fade-in">
-                                    <button
-                                        onClick={() => setViewingBatch(null)}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.9rem', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}
-                                    >
-                                        <FaChevronDown style={{ transform: 'rotate(90deg)' }} /> Back to Folers
-                                    </button>
+                        <div style={{ background: 'white', padding: '2rem', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', border: '1px solid #e2e8f0' }}>
+                            <div>
+                                {viewingBatch ? (
+                                    <div className="fade-in">
+                                        <button
+                                            onClick={() => setViewingBatch(null)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.9rem', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}
+                                        >
+                                            <FaChevronDown style={{ transform: 'rotate(90deg)' }} /> Back to Folders
+                                        </button>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0' }}>
-                                        <div style={{ background: '#eff6ff', padding: '0.75rem', borderRadius: '12px' }}>
-                                            <FaFolder size={24} color="#3b82f6" />
-                                        </div>
-                                        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{viewingBatch}</h3>
-                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', background: '#f1f5f9', padding: '0.2rem 0.6rem', borderRadius: '12px', marginLeft: 'auto' }}>
-                                            {groupedDocs[viewingBatch]?.length || 0} files
-                                        </span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                        {groupedDocs[viewingBatch]?.map(doc => (
-                                            <div key={doc._id} style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '1rem',
-                                                background: 'white',
-                                                borderRadius: '12px',
-                                                border: '1px solid #e2e8f0',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                    <FaFile color="var(--text-dim)" size={18} />
-                                                    <div>
-                                                        <a href={doc.file_path} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'var(--text-main)', fontWeight: '500', marginBottom: '0.2rem' }}>
-                                                            {doc.original_filename}
-                                                        </a>
-                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                                                            {new Date(doc.upload_date).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); deleteDoc(doc._id); }}
-                                                    className="btn-icon"
-                                                    style={{ width: '32px', height: '32px', color: '#ef4444', background: '#fee2e2' }}
-                                                    title="Delete"
-                                                >
-                                                    <FaTrash size={12} />
-                                                </button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0' }}>
+                                            <div style={{ background: '#eff6ff', padding: '0.75rem', borderRadius: '12px' }}>
+                                                <FaFolder size={24} color="#3b82f6" />
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>My Uploaded Resources</h3>
-                                    {myDocs.length === 0 ? (
-                                        <p style={{ textAlign: 'center', color: 'var(--text-dim)' }}>No uploads found.</p>
-                                    ) : (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                                            {Object.entries(groupedDocs).map(([batchName, docs]) => (
-                                                <div
-                                                    key={batchName}
-                                                    onClick={() => setViewingBatch(batchName)}
-                                                    style={{
-                                                        background: 'white',
-                                                        border: '1px solid #e2e8f0',
-                                                        borderRadius: '16px',
-                                                        padding: '1.5rem',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s',
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        alignItems: 'center',
-                                                        textAlign: 'center',
-                                                        userSelect: 'none'
-                                                    }}
-                                                    className="folder-card hover-lift"
-                                                >
-                                                    <div style={{ marginBottom: '1rem', color: '#3b82f6' }}>
-                                                        <FaFolder size={48} />
+                                            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{viewingBatch}</h3>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', background: '#f1f5f9', padding: '0.2rem 0.6rem', borderRadius: '12px', marginLeft: 'auto' }}>
+                                                {groupedDocs[viewingBatch]?.length || 0} files
+                                            </span>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            {groupedDocs[viewingBatch]?.map(doc => (
+                                                <div key={doc._id} style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: '1rem',
+                                                    background: 'white',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid #e2e8f0',
+                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                        <FaFile color="var(--text-dim)" size={18} />
+                                                        <div>
+                                                            <a href={doc.file_path} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'var(--text-main)', fontWeight: '500', marginBottom: '0.2rem' }}>
+                                                                {doc.original_filename}
+                                                            </a>
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                                                                {new Date(doc.upload_date).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div style={{ fontWeight: '600', color: 'var(--text-main)', marginBottom: '0.25rem' }}>{batchName}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{docs.length} files</div>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); deleteDoc(doc._id); }}
+                                                        className="btn-icon"
+                                                        style={{ width: '32px', height: '32px', color: '#ef4444', background: '#fee2e2' }}
+                                                        title="Delete"
+                                                    >
+                                                        <FaTrash size={12} />
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <h3 style={{ marginBottom: '1.5rem' }}>My Uploaded Resources</h3>
+                                        {myDocs.length === 0 ? (
+                                            <p style={{ textAlign: 'center', color: 'var(--text-dim)' }}>No uploads found.</p>
+                                        ) : (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                                                {Object.entries(groupedDocs).map(([batchName, docs]) => (
+                                                    <div
+                                                        key={batchName}
+                                                        onClick={() => setViewingBatch(batchName)}
+                                                        style={{
+                                                            background: 'white',
+                                                            border: '1px solid #e2e8f0',
+                                                            borderRadius: '16px',
+                                                            padding: '1.5rem',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            textAlign: 'center',
+                                                            userSelect: 'none'
+                                                        }}
+                                                        className="folder-card hover-lift"
+                                                    >
+                                                        <div style={{ marginBottom: '1rem', color: '#3b82f6' }}>
+                                                            <FaFolder size={48} />
+                                                        </div>
+                                                        <div style={{ fontWeight: '600', color: 'var(--text-main)', marginBottom: '0.25rem' }}>{batchName}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{docs.length} files</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
                     {activeTab === 'announcement' && (
-                        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Batch Announcement</h3>
-                            {msg && <p style={{ textAlign: 'center', color: msg.includes('Success') ? 'var(--success)' : 'var(--error)', marginBottom: '1rem' }}>{msg}</p>}
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0' }}>
+                            <div className="fade-in" style={{
+                                width: '100%',
+                                maxWidth: '600px',
+                                background: 'white',
+                                padding: '3rem',
+                                borderRadius: '20px',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                border: '1px solid #e2e8f0',
+                                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                            }}
+                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'; }}
+                            >
+                                <div style={{ maxWidth: '600px', margin: '0 auto' }}>
 
-                            {loading ? <div style={{ display: 'flex', justifyContent: 'center' }}><Loader /></div> :
-                                <form onSubmit={async (e) => {
-                                    e.preventDefault();
-                                    setLoading(true);
-                                    try {
-                                        await axios.post('/announcements', {
-                                            title: e.target.title.value,
-                                            content: e.target.content.value,
-                                            type: 'ANNOUNCEMENT',
-                                            target_batch: selectedBatch
-                                        });
-                                        setMsg('Announcement Sent Successfully');
-                                        e.target.reset();
-                                    } catch (err) {
-                                        setMsg('Failed to send announcement');
-                                    } finally {
-                                        setLoading(false);
+                                    {msg && <p style={{ textAlign: 'center', color: msg.includes('Success') ? 'var(--success)' : 'var(--error)', marginBottom: '1rem' }}>{msg}</p>}
+
+                                    {loading ? <div style={{ display: 'flex', justifyContent: 'center' }}><Loader /></div> :
+                                        <form onSubmit={async (e) => {
+                                            e.preventDefault();
+                                            setLoading(true);
+                                            try {
+                                                await axios.post('/announcements', {
+                                                    title: e.target.title.value,
+                                                    content: e.target.content.value,
+                                                    type: 'ANNOUNCEMENT',
+                                                    target_batch: selectedBatch
+                                                });
+                                                setMsg('Announcement Sent Successfully');
+                                                e.target.reset();
+                                            } catch (err) {
+                                                setMsg('Failed to send announcement');
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}>
+                                            <div style={{ marginBottom: '1rem' }}>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Target Batch</label>
+                                                <select
+                                                    value={selectedBatch}
+                                                    onChange={e => setSelectedBatch(e.target.value)}
+                                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                                >
+                                                    {batches?.map(b => (
+                                                        <option key={b._id} value={b._id}>{b.batch_name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div style={{ marginBottom: '1rem' }}>
+                                                <input name="title" type="text" placeholder="Title" required style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd' }} />
+                                            </div>
+                                            <div style={{ marginBottom: '1.5rem' }}>
+                                                <textarea name="content" rows="4" placeholder="Message..." required style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd', resize: 'vertical' }}></textarea>
+                                            </div>
+
+                                            <button type="submit" className="btn-primary" style={{ width: '100%' }}>Send Announcement</button>
+                                        </form>
                                     }
-                                }}>
-                                    <div style={{ marginBottom: '1rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Target Batch</label>
-                                        <select
-                                            value={selectedBatch}
-                                            onChange={e => setSelectedBatch(e.target.value)}
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
-                                        >
-                                            {batches?.map(b => (
-                                                <option key={b._id} value={b._id}>{b.batch_name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div style={{ marginBottom: '1rem' }}>
-                                        <input name="title" type="text" placeholder="Title" required style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd' }} />
-                                    </div>
-                                    <div style={{ marginBottom: '1.5rem' }}>
-                                        <textarea name="content" rows="4" placeholder="Message..." required style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd', resize: 'vertical' }}></textarea>
-                                    </div>
-
-                                    <button type="submit" className="btn-primary" style={{ width: '100%' }}>Send Announcement</button>
-                                </form>
-                            }
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../utils/axiosConfig';
 import { AuthContext } from '../context/AuthContext';
-import { Loader, Toast } from '../components/UI';
+import { Loader, Toast, ConfirmModal } from '../components/UI';
 import { Layout } from '../components/Layout';
 import { FaTrash, FaPlus, FaList, FaComments, FaBars, FaTimes, FaUser } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom'; // Add useNavigate
@@ -35,6 +35,9 @@ const CoordinatorDashboard = () => {
 
     const [loading, setLoading] = useState(false);
 
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isDanger: false });
+    const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
+
     // Profile Edit State
     const [editMode, setEditMode] = useState(false);
     const [editData, setEditData] = useState({ full_name: '', email: '', department: '' });
@@ -53,15 +56,24 @@ const CoordinatorDashboard = () => {
         }
     };
 
-    const deleteAccount = async () => {
-        if (!window.confirm('Are you ABSOLUTELY SURE? This will delete your account and all files permanently.')) return;
-        try {
-            await axios.delete('/auth/profile');
-            alert('Account deleted.');
-            window.location.href = '/';
-        } catch (err) {
-            alert('Delete failed');
-        }
+    const deleteAccount = () => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Delete Account?',
+            message: 'Are you ABSOLUTELY SURE? This will delete your account and all files permanently.',
+            isDanger: true,
+            onConfirm: async () => {
+                try {
+                    await axios.delete('/auth/profile');
+                    alert('Account deleted.');
+                    window.location.href = '/';
+                } catch (err) {
+                    showToast('Delete failed', 'error');
+                } finally {
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
     useEffect(() => {
@@ -102,31 +114,48 @@ const CoordinatorDashboard = () => {
         }
     };
 
-    const deleteBatch = async (id) => {
-        if (!window.confirm('Are you sure? This will delete the batch and all associated data.')) return;
-        setLoading(true);
-        try {
-            await axios.delete(`/batches/${id}`);
-            showToast('Batch deleted successfully', 'success');
-            fetchBatches();
-        } catch (err) {
-            showToast('Error deleting batch', 'error');
-        } finally {
-            setLoading(false);
-        }
+    const deleteBatch = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Delete Batch?',
+            message: 'Are you sure you want to delete this batch and all associated data?',
+            isDanger: true,
+            onConfirm: async () => {
+                setLoading(true);
+                try {
+                    await axios.delete(`/batches/${id}`);
+                    showToast('Batch deleted successfully', 'success');
+                    fetchBatches();
+                } catch (err) {
+                    showToast('Error deleting batch', 'error');
+                } finally {
+                    setLoading(false);
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
-    const deleteFeedback = async (id) => {
-        if (!window.confirm('Delete this feedback?')) return;
-        try {
-            console.log('Deleting feedback:', id);
-            await axios.delete(`/feedback/${id}`);
-            fetchFeedback();
-            showToast('Feedback deleted', 'success');
-        } catch (err) {
-            console.error(err);
-            showToast('Failed to delete feedback', 'error');
-        }
+    const deleteFeedback = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Delete Feedback?',
+            message: 'Are you sure you want to delete this feedback message?',
+            isDanger: true,
+            onConfirm: async () => {
+                try {
+                    console.log('Deleting feedback:', id);
+                    await axios.delete(`/feedback/${id}`);
+                    fetchFeedback();
+                    showToast('Feedback deleted', 'success');
+                } catch (err) {
+                    console.error(err);
+                    showToast('Failed to delete feedback', 'error');
+                } finally {
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
     if (authLoading) {
@@ -139,85 +168,16 @@ const CoordinatorDashboard = () => {
         <Layout>
             <div className="container" style={{ maxWidth: '1000px' }}>
                 {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-                {/* Mobile Menu Toggle */}
-                <button
-                    className="mobile-menu-toggle"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                    style={{ marginBottom: '1rem' }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        {mobileMenuOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
-                        <span>{mobileMenuOpen ? 'Close' : 'Coordinator Menu'}</span>
-                    </div>
-                </button>
-
-                {/* Overlay for mobile */}
-                <div
-                    className={`menu-overlay ${mobileMenuOpen ? 'open' : ''}`}
-                    onClick={() => setMobileMenuOpen(false)}
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={closeConfirmModal}
+                    onConfirm={confirmModal.onConfirm}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    isDanger={confirmModal.isDanger}
                 />
 
-                {/* Menu System */}
-                <div className={`tab-menu ${mobileMenuOpen ? 'open' : ''}`}>
-                    <div style={{ padding: '0 0.5rem 1rem 0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--glass-border)', display: 'none' }} className="mobile-only-header">
-                        <span style={{ fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--primary)' }}>Menu</span>
-                    </div>
 
-                    {/* 'My Profile' removed from here, accessed via Header */}
-
-                    <button
-                        onClick={() => { navigate('?tab=create'); setMobileMenuOpen(false); }}
-                        className={`btn-tab ${activeTab === 'create' ? 'active' : ''}`}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: activeTab === 'create' ? 'var(--primary)' : 'var(--surface)',
-                            color: activeTab === 'create' ? 'white' : 'var(--text-main)',
-                            cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: '0.2s',
-                            fontSize: '1rem'
-                        }}
-                    >
-                        <FaPlus /> Create Batch
-                    </button>
-                    <button
-                        onClick={() => { navigate('?tab=list'); setMobileMenuOpen(false); }}
-                        className={`btn-tab ${activeTab === 'list' ? 'active' : ''}`}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: activeTab === 'list' ? 'var(--primary)' : 'var(--surface)',
-                            color: activeTab === 'list' ? 'white' : 'var(--text-main)',
-                            cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: '0.2s',
-                            fontSize: '1rem'
-                        }}
-                    >
-                        <FaList /> Existing Batches
-                    </button>
-                    <button
-                        onClick={() => { navigate('?tab=feedback'); setMobileMenuOpen(false); }}
-                        className={`btn-tab ${activeTab === 'feedback' ? 'active' : ''}`}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: activeTab === 'feedback' ? 'var(--primary)' : 'var(--surface)',
-                            color: activeTab === 'feedback' ? 'white' : 'var(--text-main)',
-                            cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: '0.2s',
-                            fontSize: '1rem'
-                        }}
-                    >
-                        <FaComments /> Student Feedback
-                    </button>
-                </div>
 
                 <div className="glass-panel fade-in" style={{ minHeight: '400px' }}>
 
@@ -304,7 +264,6 @@ const CoordinatorDashboard = () => {
 
                     {activeTab === 'create' && (
                         <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-                            <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--primary)' }}>Create New Batch</h3>
                             {loading ? <div style={{ display: 'flex', justifyContent: 'center' }}><Loader /></div> :
                                 <form onSubmit={createBatch}>
                                     <input type="text" placeholder="Batch Name (e.g. CSE 2026)" value={formData.batch_name} onChange={e => setFormData({ ...formData, batch_name: e.target.value })} required />
@@ -318,7 +277,7 @@ const CoordinatorDashboard = () => {
 
                     {activeTab === 'list' && (
                         <div>
-                            <h3 style={{ marginBottom: '1.5rem' }}>Managed Batches</h3>
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 {batches.length === 0 ? <p style={{ textAlign: 'center', color: 'var(--text-dim)' }}>No batches found. Create one first.</p> :
                                     batches.map(batch => (
@@ -347,7 +306,7 @@ const CoordinatorDashboard = () => {
 
                     {activeTab === 'feedback' && (
                         <div>
-                            <h3 style={{ marginBottom: '1.5rem' }}>Student Feedback</h3>
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '600px', overflowY: 'auto' }}>
                                 {feedback.length === 0 ? <p style={{ textAlign: 'center', color: 'var(--text-dim)' }}>No feedback messages.</p> :
                                     feedback.map(item => (

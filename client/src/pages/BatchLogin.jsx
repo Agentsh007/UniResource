@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,6 +7,7 @@ import { Loader, Toast } from '../components/UI';
 
 const BatchLogin = () => {
     const [formData, setFormData] = useState({ username: '', password: '' });
+    const [showPassword, setShowPassword] = useState(false);
     const { loginBatch, user } = useContext(AuthContext);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -46,7 +48,37 @@ const BatchLogin = () => {
                 {loading ? <div style={{ textAlign: 'center', padding: '2rem' }}><Loader /><p style={{ marginTop: '1rem', color: 'var(--text-dim)' }}>Unlocking class resources...</p></div> :
                     <form onSubmit={onSubmit}>
                         <input type="text" placeholder="Batch Username (e.g. CSE-24)" name="username" value={formData.username} onChange={onChange} required />
-                        <input type="password" placeholder="Batch Password" name="password" value={formData.password} onChange={onChange} required />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Batch Password"
+                                name="password"
+                                value={formData.password}
+                                onChange={onChange}
+                                required
+                                style={{ paddingRight: '40px' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '38%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'var(--text-dim)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '5px'
+                                }}
+                            >
+                                {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                            </button>
+                        </div>
 
                         <button type="submit" className="btn-primary" style={{ width: '100%' }}>
                             Enter Class

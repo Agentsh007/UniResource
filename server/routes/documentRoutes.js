@@ -53,44 +53,44 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
         }
 
         // Upload to Cloudinary using Stream
-        // For raw files, explicit public_id is more reliable for folder structure
-        const timestamp = Math.floor(Date.now() / 1000);
+        const path = require('path');
+        // Stream Upload with 'auto' resource type
         const cleanFileName = req.file.originalname.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
+        const timestamp = Date.now();
         const fullPublicId = `uni_connect_documents/${folderName}/${cleanFileName}_${timestamp}`;
 
-        const uploadStream = cloudinary.uploader.upload_stream(
-            {
-                public_id: fullPublicId,
-                resource_type: 'auto'
-            },
-            async (error, result) => {
-                if (error) {
-                    console.error('Cloudinary Upload Error:', error);
-                    return res.status(500).json({ msg: 'Cloudinary Upload Failed', error });
-                }
+        // Data URI Upload with FORCED RAW
+        const fileExt = path.extname(req.file.originalname);
+        const isImage = req.file.mimetype.startsWith('image/');
+        const resourceType = isImage ? 'image' : 'raw';
 
-                try {
-                    const newDoc = new Document({
-                        file_path: result.secure_url,
-                        cloudinary_id: result.public_id,
-                        original_filename: req.file.originalname,
-                        uploaded_by: req.user.id,
-                        target_batch: batchId || undefined // Save batch ref if exists
-                    });
+        let finalPublicId = fullPublicId;
+        if (resourceType === 'raw') {
+            finalPublicId += fileExt;
+        }
 
-                    const doc = await newDoc.save();
-                    res.json(doc);
-                } catch (dbErr) {
-                    console.error('Database Save Error:', dbErr);
-                    res.status(500).json({ msg: 'Database Error', error: dbErr.message });
-                }
-            }
-        );
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = "data:" + req.file.mimetype + ";base64," + b64;
 
-        // Pipe buffer to stream
-        const bufferStream = require('stream').PassThrough();
-        bufferStream.end(req.file.buffer);
-        bufferStream.pipe(uploadStream);
+        console.log(`[DocUpload] Uploading as ${resourceType} to ${finalPublicId}`);
+
+        const result = await cloudinary.uploader.upload(dataURI, {
+            public_id: finalPublicId,
+            resource_type: resourceType
+        });
+
+        console.log('[DocUpload] Success:', result.secure_url);
+
+        const newDoc = new Document({
+            file_path: result.secure_url,
+            cloudinary_id: result.public_id,
+            original_filename: req.file.originalname,
+            uploaded_by: req.user.id,
+            target_batch: batchId || undefined
+        });
+
+        const doc = await newDoc.save();
+        res.json(doc);
 
     } catch (err) {
         console.error('Upload Route Error:', err);

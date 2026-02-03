@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,9 +7,11 @@ import { Loader, Toast } from '../components/UI';
 
 const StaffLogin = () => {
     const [isRegister, setIsRegister] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        email: '', password: '', full_name: '', role: 'TEACHER', secret_code: '', department: ''
+        email: '', password: '', confirmPassword: '', full_name: '', role: 'TEACHER', secret_code: '', department: ''
     });
     const [error, setError] = useState('');
     const { loginUser, registerUser, user } = useContext(AuthContext);
@@ -34,6 +37,11 @@ const StaffLogin = () => {
         try {
             let res;
             if (isRegister) {
+                if (formData.password !== formData.confirmPassword) {
+                    setError('Passwords do not match');
+                    setLoading(false);
+                    return;
+                }
                 res = await registerUser(formData);
             } else {
                 res = await loginUser(formData.email, formData.password);
@@ -74,7 +82,92 @@ const StaffLogin = () => {
                             </>
                         )}
                         <input type="email" placeholder="Email Address" name="email" value={formData.email} onChange={onChange} required />
-                        <input type="password" placeholder="Password" name="password" value={formData.password} onChange={onChange} required />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Password"
+                                name="password"
+                                value={formData.password}
+                                onChange={onChange}
+                                required
+                                style={{ paddingRight: '40px' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '38%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'var(--text-dim)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '5px'
+                                }}
+                            >
+                                {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                            </button>
+                        </div>
+
+                        {isRegister && (
+                            <div style={{ position: 'relative', marginTop: '1rem' }}>
+                                <input
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    placeholder="Confirm Password"
+                                    name="confirmPassword"
+                                    value={formData.confirmPassword}
+                                    onChange={onChange}
+                                    required
+                                    style={{ paddingRight: '40px' }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '10px',
+                                        top: '38%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: 'var(--text-dim)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '5px'
+                                    }}
+                                >
+                                    {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                                </button>
+                            </div>
+                        )}
+
+                        {isRegister && formData.confirmPassword && (
+                            <div style={{
+                                marginTop: '0.5rem',
+                                marginBottom: '1rem',
+                                fontSize: '0.85rem',
+                                color: formData.password === formData.confirmPassword ? '#10b981' : '#ef4444',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                paddingLeft: '0.2rem'
+                            }}>
+                                <div style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    background: formData.password === formData.confirmPassword ? '#10b981' : '#ef4444'
+                                }}></div>
+                                {formData.password === formData.confirmPassword ? 'Passwords match' : 'Passwords do not match'}
+                            </div>
+                        )}
 
                         <button type="submit" className="btn-primary" style={{ width: '100%' }}>
                             {isRegister ? 'Register' : 'Login'}
@@ -91,7 +184,7 @@ const StaffLogin = () => {
                     </button>
                 </p>
             </div>
-        </div>
+        </div >
     );
 };
 

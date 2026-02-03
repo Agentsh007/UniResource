@@ -12,6 +12,7 @@ import CoordinatorDashboard from './pages/CoordinatorDashboard'; // Imported
 import BatchDashboard from './pages/BatchDashboard';
 import BatchFiles from './pages/BatchFiles'; // Added back
 import { Loader } from './components/UI';
+import NetworkStatus from './components/NetworkStatus';
 
 import './App.css';
 
@@ -23,15 +24,18 @@ const PrivateRoute = ({ children, role }) => {
   if (!user) return <Navigate to="/" />;
 
   // Role check
-  if (role && user.role !== role) {
-    // Handle redirect logic based on their actual role if they try accessing wrong route
-    if (user.role === 'CHAIRMAN') return <Navigate to="/chairman" />;
-    if (user.role === 'COORDINATOR') return <Navigate to="/coordinator" />; // Added
-    if (user.role === 'COMPUTER_OPERATOR') return <Navigate to="/operator" />;
-    if (user.role === 'CC') return <Navigate to="/cc" />;
-    if (user.role === 'TEACHER') return <Navigate to="/teacher" />;
-    if (user.role === 'BATCH') return <Navigate to="/batch" />;
-    return <Navigate to="/" />;
+  if (role) {
+    const authorized = Array.isArray(role) ? role.includes(user.role) : user.role === role;
+    if (!authorized) {
+      // Handle redirect logic based on their actual role if they try accessing wrong route
+      if (user.role === 'CHAIRMAN') return <Navigate to="/chairman" />;
+      if (user.role === 'COORDINATOR') return <Navigate to="/coordinator" />; // Added
+      if (user.role === 'COMPUTER_OPERATOR') return <Navigate to="/operator" />;
+      if (user.role === 'CC') return <Navigate to="/cc" />;
+      if (user.role === 'TEACHER') return <Navigate to="/teacher" />;
+      if (user.role === 'BATCH') return <Navigate to="/batch" />;
+      return <Navigate to="/" />;
+    }
   }
 
   return children;
@@ -40,6 +44,7 @@ const PrivateRoute = ({ children, role }) => {
 const App = () => {
   return (
     <AuthProvider>
+      <NetworkStatus />
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -59,12 +64,12 @@ const App = () => {
             element={<PrivateRoute role="COMPUTER_OPERATOR"><ComputerOperatorDashboard /></PrivateRoute>}
           />
           <Route
-            path="/cc"
-            element={<PrivateRoute role="CC"><CCDashboard /></PrivateRoute>}
+            path="/teacher"
+            element={<PrivateRoute role={['TEACHER', 'CC']}><TeacherDashboard /></PrivateRoute>}
           />
           <Route
-            path="/teacher"
-            element={<PrivateRoute role="TEACHER"><TeacherDashboard /></PrivateRoute>}
+            path="/cc"
+            element={<PrivateRoute role={['CC', 'TEACHER']}><CCDashboard /></PrivateRoute>}
           />
           <Route
             path="/batch/*"
