@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from '../utils/axiosConfig';
 import { AuthContext } from '../context/AuthContext';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { FaFolder, FaPaperPlane, FaBell, FaBullhorn, FaFilePdf, FaImage, FaUser } from 'react-icons/fa';
 
 import { Layout } from '../components/Layout';
@@ -10,6 +10,7 @@ import { ConfirmModal } from '../components/UI';
 const BatchDashboard = () => {
     const { user } = useContext(AuthContext);
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const activeTab = searchParams.get('tab') || 'folders'; // folders(default), notices, feedback
 
     const [teachers, setTeachers] = useState([]);
@@ -43,7 +44,10 @@ const BatchDashboard = () => {
     const sendFeedback = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('/feedback', { message_content: feedbackMsg, is_anonymous: isAnonymous });
+            await axios.post('/feedback', {
+                message_content: feedbackMsg,
+                is_anonymous: isAnonymous
+            });
             setSentMsg('Feedback Sent to Head Authority!');
             setFeedbackMsg('');
             setIsAnonymous(false);
@@ -120,7 +124,7 @@ const BatchDashboard = () => {
 
                     {activeTab === 'notices' && (
                         <div>
-                            {announcements.length === 0 ? <p style={{ color: 'var(--text-dim)', textAlign: 'center', marginTop: '1rem' }}>No new notices.</p> :
+                            {announcements.filter(a => a.type === 'NOTICE' || a.type === 'ANNOUNCEMENT').length === 0 ? <p style={{ color: 'var(--text-dim)', textAlign: 'center', marginTop: '1rem' }}>No new notices.</p> :
                                 <div className="table-container">
                                     <table className="custom-table">
                                         <thead>
@@ -133,7 +137,7 @@ const BatchDashboard = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {announcements.map((ann, index) => {
+                                            {announcements.filter(a => a.type === 'NOTICE' || a.type === 'ANNOUNCEMENT').map((ann, index) => {
                                                 const isPdf = ann.file_url && ann.file_url.toLowerCase().endsWith('.pdf');
                                                 const isImage = ann.file_url && (ann.file_url.match(/\.(jpeg|jpg|gif|png)$/) != null);
 
@@ -141,7 +145,7 @@ const BatchDashboard = () => {
                                                     <tr key={ann._id}>
                                                         <td style={{ textAlign: 'center' }}>{index + 1}</td>
                                                         <td style={{ fontWeight: '500', color: 'var(--text-main)' }}>
-                                                            {ann.type === 'NOTICE' && <FaBullhorn style={{ marginRight: '0.5rem', color: '#f97316' }} />}
+                                                            <FaBullhorn style={{ marginRight: '0.5rem', color: '#f97316' }} />
                                                             {ann.title}
                                                         </td>
                                                         <td style={{ textAlign: 'center' }}>
@@ -169,6 +173,36 @@ const BatchDashboard = () => {
                                             })}
                                         </tbody>
                                     </table>
+                                </div>
+                            }
+                        </div>
+                    )}
+
+                    {activeTab === 'routine' && (
+                        <div>
+                            <h3 style={{ fontSize: '1.2rem', color: 'var(--text-main)', marginBottom: '1.5rem', fontWeight: '600' }}>Class Routines</h3>
+                            {announcements.filter(a => a.type === 'ROUTINE').length === 0 ? <p style={{ color: 'var(--text-dim)', textAlign: 'center' }}>No routines published yet.</p> :
+                                <div style={{ display: 'grid', gap: '1.5rem' }}>
+                                    {announcements.filter(a => a.type === 'ROUTINE').map(routine => (
+                                        <div key={routine._id} style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                                                <div>
+                                                    <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.5rem' }}>{routine.title}</h4>
+                                                    <p style={{ color: '#475569', marginBottom: '1rem' }}>{routine.content}</p>
+                                                    <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                                                        Posted on: {new Date(routine.created_at).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                                    {routine.file_url && (
+                                                        <a href={routine.file_url} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <FaFilePdf /> View Routine
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             }
                         </div>
@@ -209,6 +243,7 @@ const BatchDashboard = () => {
                                 )}
 
                                 <form onSubmit={sendFeedback}>
+
                                     <div style={{ marginBottom: '1.5rem' }}>
                                         <textarea
                                             rows="6"

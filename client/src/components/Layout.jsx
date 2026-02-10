@@ -56,11 +56,9 @@ export const Header = () => {
     const goToProfile = () => {
         setIsMobileMenuOpen(false);
         if (!user) return;
-        if (user.role === 'COORDINATOR') navigate('/coordinator?tab=profile');
-        else if (user.role === 'TEACHER') navigate('/teacher?tab=profile');
-        else if (user.role === 'CC') navigate('/teacher?tab=profile');
+        if (user.role === 'TEACHER') navigate('/teacher?tab=profile');
         else if (user.role === 'CHAIRMAN') navigate('/chairman?tab=profile');
-        else if (user.role === 'COMPUTER_OPERATOR') navigate('/operator');
+        else if (user.role === 'COMPUTER_OPERATOR') navigate('/operator?tab=profile');
         else if (user.role === 'BATCH') navigate('/batch?tab=profile');
     };
 
@@ -99,7 +97,7 @@ export const Header = () => {
                     <div style={{ background: 'var(--primary-fade)', padding: '0.4rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <FaGraduationCap size={28} color="var(--primary)" />
                     </div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-main)', margin: 0, letterSpacing: '-0.5px' }}>UniRes</h1>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--primary)', margin: 0, letterSpacing: '-0.5px' }}>DeptHub</h1>
                 </div>
 
                 {/* Desktop Nav */}
@@ -108,57 +106,31 @@ export const Header = () => {
                         <>
                             <button onClick={() => navigate('/batch?tab=folders')} className={activeTab === 'folders' ? '' : 'nav-link'} style={getLinkStyle('folders')}>Faculty Folders</button>
                             <button onClick={() => navigate('/batch?tab=notices')} className={activeTab === 'notices' ? '' : 'nav-link'} style={getLinkStyle('notices')}>Notices</button>
+                            <button onClick={() => navigate('/batch?tab=updates')} className={activeTab === 'updates' ? '' : 'nav-link'} style={getLinkStyle('updates')}>Class Updates</button>
+                            <button onClick={() => navigate('/batch?tab=routine')} className={activeTab === 'routine' ? '' : 'nav-link'} style={getLinkStyle('routine')}>Routine</button>
                             <button onClick={() => navigate('/batch?tab=feedback')} className={activeTab === 'feedback' ? '' : 'nav-link'} style={getLinkStyle('feedback')}>Feedback</button>
-                        </>
-                    ) : user?.role === 'CC' ? (
-                        <>
-                            <button onClick={() => navigate('/teacher?tab=new-upload')} className={activeTab === 'new-upload' ? '' : 'nav-link'} style={getLinkStyle('new-upload')}>New Upload</button>
-                            <button onClick={() => navigate('/teacher?tab=my-uploads')} className={activeTab === 'my-uploads' ? '' : 'nav-link'} style={getLinkStyle('my-uploads')}>My Uploads</button>
-                            <button onClick={() => navigate('/teacher?tab=announcement')} className={activeTab === 'announcement' ? '' : 'nav-link'} style={getLinkStyle('announcement')}>Announcements</button>
-
-                            <button
-                                onClick={() => navigate('/cc')}
-                                className={location.pathname === '/cc' ? '' : 'nav-link'}
-                                style={{
-                                    background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '500', transition: 'all 0.2s', paddingBottom: '2px',
-                                    color: location.pathname === '/cc' ? 'var(--primary)' : 'var(--text-main)',
-                                    borderBottom: location.pathname === '/cc' ? '2px solid var(--primary)' : '2px solid transparent',
-                                }}
-                            >
-                                Class Coordinator
-                            </button>
                         </>
                     ) : user?.role === 'TEACHER' ? (
                         <>
-                            <button onClick={() => navigate('/teacher?tab=new-upload')} className={activeTab === 'new-upload' ? '' : 'nav-link'} style={getLinkStyle('new-upload')}>New Upload</button>
-                            <button onClick={() => navigate('/teacher?tab=my-uploads')} className={activeTab === 'my-uploads' ? '' : 'nav-link'} style={getLinkStyle('my-uploads')}>My Uploads</button>
-                            <button onClick={() => navigate('/teacher?tab=announcement')} className={activeTab === 'announcement' ? '' : 'nav-link'} style={getLinkStyle('announcement')}>Announcements</button>
-
-                            {user.assigned_batch && (
-                                <button
-                                    onClick={() => navigate('/cc')}
-                                    className={location.pathname === '/cc' ? '' : 'nav-link'}
-                                    style={{
-                                        background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '500', transition: 'all 0.2s', paddingBottom: '2px',
-                                        color: location.pathname === '/cc' ? 'var(--primary)' : 'var(--text-main)',
-                                        borderBottom: location.pathname === '/cc' ? '2px solid var(--primary)' : '2px solid transparent',
-                                    }}
-                                >
-                                    Class Coordinator
-                                </button>
-                            )}
+                            <button onClick={() => navigate('/teacher?tab=new-upload')} className={activeTab === 'new-upload' ? '' : 'nav-link'} style={getLinkStyle('new-upload')}>Resource Upload</button>
+                            <button onClick={() => navigate('/teacher?tab=my-uploads')} className={activeTab === 'my-uploads' ? '' : 'nav-link'} style={getLinkStyle('my-uploads')}>My Resources</button>
+                            <button onClick={() => navigate('/teacher?tab=class-updates')} className={activeTab === 'class-updates' ? '' : 'nav-link'} style={getLinkStyle('class-updates')}>Class Updates</button>
+                            <button onClick={() => navigate('/teacher?tab=routine')} className={activeTab === 'routine' ? '' : 'nav-link'} style={getLinkStyle('routine')}>My Routines</button>
+                            <button onClick={() => navigate('/teacher?tab=peer-review')} className={activeTab === 'peer-review' ? '' : 'nav-link'} style={getLinkStyle('peer-review')}>Peer Review</button>
+                            <button onClick={() => navigate('/teacher?tab=notices')} className={activeTab === 'notices' ? '' : 'nav-link'} style={getLinkStyle('notices')}>Notices</button>
                         </>
                     ) : user?.role === 'CHAIRMAN' ? (
                         <>
-                            <button onClick={() => navigate('/chairman?tab=manage-batches')} className={activeTab === 'manage-batches' ? '' : 'nav-link'} style={getLinkStyle('manage-batches')}>Batches</button>
-                            <button onClick={() => navigate('/chairman?tab=assign-staff')} className={activeTab === 'assign-staff' ? '' : 'nav-link'} style={getLinkStyle('assign-staff')}>Assign Staff</button>
+                            <button onClick={() => navigate('/chairman?tab=notices')} className={activeTab === 'notices' ? '' : 'nav-link'} style={getLinkStyle('notices')}>Notices</button>
+                            <button onClick={() => navigate('/chairman?tab=routine')} className={activeTab === 'routine' ? '' : 'nav-link'} style={getLinkStyle('routine')}>Routine</button>
                             <button onClick={() => navigate('/chairman?tab=feedback')} className={activeTab === 'feedback' ? '' : 'nav-link'} style={getLinkStyle('feedback')}>Feedback</button>
                         </>
-                    ) : user?.role === 'COORDINATOR' ? (
+                    ) : user?.role === 'COMPUTER_OPERATOR' ? (
                         <>
-                            <button onClick={() => navigate('/coordinator?tab=create')} className={activeTab === 'create' ? '' : 'nav-link'} style={getLinkStyle('create')}>Create Batch</button>
-                            <button onClick={() => navigate('/coordinator?tab=list')} className={activeTab === 'list' ? '' : 'nav-link'} style={getLinkStyle('list')}>View Batches</button>
-                            <button onClick={() => navigate('/coordinator?tab=feedback')} className={activeTab === 'feedback' ? '' : 'nav-link'} style={getLinkStyle('feedback')}>Feedback</button>
+                            <button onClick={() => navigate('/operator?tab=home')} className={activeTab === 'home' ? '' : 'nav-link'} style={getLinkStyle('home')}>Home</button>
+                            <button onClick={() => navigate('/operator?tab=notices')} className={activeTab === 'notices' ? '' : 'nav-link'} style={getLinkStyle('notices')}>Notices</button>
+                            <button onClick={() => navigate('/operator?tab=routine')} className={activeTab === 'routine' ? '' : 'nav-link'} style={getLinkStyle('routine')}>Routine</button>
+                            <button onClick={() => navigate('/operator?tab=batch')} className={activeTab === 'batch' ? '' : 'nav-link'} style={getLinkStyle('batch')}>Batch</button>
                         </>
                     ) : (
                         <>
@@ -234,29 +206,30 @@ export const Header = () => {
                     <>
                         <button onClick={() => { setIsMobileMenuOpen(false); navigate('/batch?tab=folders'); }} className="mobile-nav-link">Faculty Folders</button>
                         <button onClick={() => { setIsMobileMenuOpen(false); navigate('/batch?tab=notices'); }} className="mobile-nav-link">Notices</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/batch?tab=updates'); }} className="mobile-nav-link">Class Updates</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/batch?tab=routine'); }} className="mobile-nav-link">Routine</button>
                         <button onClick={() => { setIsMobileMenuOpen(false); navigate('/batch?tab=feedback'); }} className="mobile-nav-link">Feedback</button>
                     </>
                 ) : user?.role === 'TEACHER' ? (
                     <>
-                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/teacher?tab=new-upload'); }} className="mobile-nav-link">New Upload</button>
-                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/teacher?tab=my-uploads'); }} className="mobile-nav-link">My Uploads</button>
                         <button onClick={() => { setIsMobileMenuOpen(false); navigate('/teacher?tab=announcement'); }} className="mobile-nav-link">Announcements</button>
-
-                        {user.assigned_batch && (
-                            <button onClick={() => { setIsMobileMenuOpen(false); navigate('/cc'); }} className="mobile-nav-link" style={{ color: 'var(--primary)', fontWeight: '700' }}>Class Coordinator</button>
-                        )}
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/teacher?tab=new-upload'); }} className="mobile-nav-link">New Upload</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/teacher?tab=my-uploads'); }} className="mobile-nav-link">My Upload</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/teacher?tab=notices'); }} className="mobile-nav-link">Notices</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/teacher?tab=routine'); }} className="mobile-nav-link">Routine</button>
                     </>
                 ) : user?.role === 'CHAIRMAN' ? (
                     <>
-                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/chairman?tab=manage-batches'); }} className="mobile-nav-link">Batches</button>
-                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/chairman?tab=assign-staff'); }} className="mobile-nav-link">Assign Staff</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/chairman?tab=notices'); }} className="mobile-nav-link">Notices</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/chairman?tab=routine'); }} className="mobile-nav-link">Routine</button>
                         <button onClick={() => { setIsMobileMenuOpen(false); navigate('/chairman?tab=feedback'); }} className="mobile-nav-link">Feedback</button>
                     </>
-                ) : user?.role === 'COORDINATOR' ? (
+                ) : user?.role === 'COMPUTER_OPERATOR' ? (
                     <>
-                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/coordinator?tab=create'); }} className="mobile-nav-link">Create Batch</button>
-                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/coordinator?tab=list'); }} className="mobile-nav-link">View Batches</button>
-                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/coordinator?tab=feedback'); }} className="mobile-nav-link">Feedback</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/operator?tab=home'); }} className="mobile-nav-link">Home</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/operator?tab=notices'); }} className="mobile-nav-link">Notices</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/operator?tab=routine'); }} className="mobile-nav-link">Routine</button>
+                        <button onClick={() => { setIsMobileMenuOpen(false); navigate('/operator?tab=batch'); }} className="mobile-nav-link">Batch</button>
                     </>
                 ) : (
                     <>

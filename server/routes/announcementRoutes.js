@@ -28,7 +28,7 @@ const upload = multer({
 // @access  Public
 router.get('/public', async (req, res) => {
     try {
-        const notices = await Announcement.find({ type: 'NOTICE' })
+        const notices = await Announcement.find({ type: 'NOTICE', status: 'APPROVED' })
             .populate('author', 'full_name role')
             .sort({ created_at: -1 })
             .limit(10); // Limit to latest 10
@@ -46,16 +46,13 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
     const { role } = req.user;
 
     // Permission Check
-    if (type === 'NOTICE') {
-        if (!['CHAIRMAN', 'COMPUTER_OPERATOR'].includes(role)) {
-            return res.status(403).json({ msg: 'Only Chairman or Operator can post Notices' });
+    if (type === 'NOTICE' || type === 'ROUTINE') {
+        if (!['CHAIRMAN', 'COMPUTER_OPERATOR', 'TEACHER'].includes(role)) {
+            return res.status(403).json({ msg: 'Not Authorized to post Notices/Routines' });
         }
     } else if (type === 'ANNOUNCEMENT') {
-        if (!['CC', 'TEACHER'].includes(role)) {
-            return res.status(403).json({ msg: 'Only CC or Teacher can post Announcements' });
-        }
-        if (!target_batch) {
-            return res.status(400).json({ msg: 'Announcements must have a target batch' });
+        if (!['TEACHER', 'COMPUTER_OPERATOR'].includes(role)) {
+            return res.status(403).json({ msg: 'Only Teacher or Operator can post Announcements' });
         }
     } else {
         return res.status(400).json({ msg: 'Invalid Type' });
@@ -65,74 +62,49 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
         let file_url = null;
 
         if (req.file) {
-            // Upload to Cloudinary
-            const path = require('path');
-            const fileExt = path.extname(req.file.originalname);
-            const cleanFileName = req.file.originalname.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
-            const isImage = req.file.mimetype.startsWith('image/');
-            const resourceType = isImage ? 'image' : 'raw';
-
-            // For raw files, we MUST append extension to public_id to preserve it in URL
-            const fullPublicId = `uni_connect_notices/${cleanFileName}_${Date.now()}`;
-
-            // Revert towards standard stream - but use 'auto' or 'image' for PDFs. 
-            // 'raw' for PDF often causes "Failed to load" if not handled perfectly.
-            // Cloudinary recommends 'image' for PDFs to generate thumbnails and view them.
-
-            // Allow Cloudinary to detect. For PDF, it becomes 'image' usually.
-            // But we want to ensure it works.
-
-            // Data URI Upload with FORCED RAW for Documents
-            // This ensures PDFs are not converted to images (which causes "Failed to Load")
-            // (Variables isImage and resourceType already defined above)
-
-            // Append extension for raw files so URL is correct (e.g. file.pdf)
-            let finalPublicId = fullPublicId;
-            if (resourceType === 'raw') {
-                finalPublicId += fileExt;
-            }
-
             const b64 = Buffer.from(req.file.buffer).toString('base64');
             const dataURI = "data:" + req.file.mimetype + ";base64," + b64;
-
-            console.log(`[Upload] Starting: ${req.file.originalname}, Type: ${resourceType}, ID: ${finalPublicId}`);
-
             const result = await cloudinary.uploader.upload(dataURI, {
-                public_id: finalPublicId,
-                resource_type: resourceType
+                resource_type: "auto",
+                folder: "uni_connect_notices"
             });
-
-            console.log('[Upload] Success. URL:', result.secure_url);
             file_url = result.secure_url;
-
-            const newAnnouncement = new Announcement({
-                title,
-                content,
-                author: req.user.id,
-                target_batch: target_batch || null,
-                type,
-                file_url
-            });
-
-            const saved = await newAnnouncement.save();
-            res.json(saved);
-
-        } else {
-            const newAnnouncement = new Announcement({
-                title,
-                content,
-                author: req.user.id,
-                target_batch: target_batch || null, // Null for global notices
-                type
-            });
-
-            const saved = await newAnnouncement.save();
-            res.json(saved);
         }
+
+        // Determine Status
+        let status = 'PENDING_APPROVAL'; // Default for Staff (Notice/Routine)
+
+        if (type === 'ANNOUNCEMENT') {
+            status = 'APPROVED'; // Class updates/internal announcements are auto-approved
+        } else if (role === 'CHAIRMAN') {
+            status = 'APPROVED';
+        } else if (role === 'TEACHER' && type === 'ROUTINE') {
+            // Teacher posting Routine: Check requested status
+            if (req.body.status === 'PENDING_FEEDBACK' || req.body.status === 'PENDING_APPROVAL') {
+                status = req.body.status;
+            } else {
+                status = 'PENDING_FEEDBACK'; // Default to feedback phase
+            }
+        } else if (role === 'COMPUTER_OPERATOR') {
+            status = 'PENDING_APPROVAL';
+        }
+
+        const newAnnouncement = new Announcement({
+            title,
+            content,
+            author: req.user.id,
+            target_batch: target_batch || null,
+            type,
+            file_url,
+            status
+        });
+
+        const saved = await newAnnouncement.save();
+        res.json(saved);
 
     } catch (err) {
         console.error('Upload Error:', err);
-        if (!res.headersSent) res.status(500).json({ msg: 'Server Error', error: err.message, stack: err.stack });
+        if (!res.headersSent) res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });
 
@@ -145,15 +117,31 @@ router.get('/', auth, async (req, res) => {
         const { role, id } = req.user;
 
         if (role === 'BATCH') {
-            // Batches see Global Notices AND Announcements for their batch
+            // Batches see Approved Global Notices AND Approved Announcements for their batch
             query = {
+                status: 'APPROVED',
                 $or: [
                     { type: 'NOTICE' }, // Global
+                    { type: 'ROUTINE' }, // Global
                     { target_batch: id } // Specific to this batch
                 ]
             };
+        } else if (role === 'CHAIRMAN') {
+            // Chairman sees Approved and Pending Approval (Not Pending Feedback)
+            query = {
+                status: { $in: ['APPROVED', 'PENDING_APPROVAL', 'PENDING'] } // 'PENDING' for backward compatibility
+            };
+        } else if (role === 'TEACHER') {
+            // Teachers see Approved, Pending Feedback (for review), and Own posts
+            query = {
+                $or: [
+                    { status: 'APPROVED' },
+                    { status: 'PENDING_FEEDBACK', type: 'ROUTINE' },
+                    { author: req.user.id }
+                ]
+            };
         } else {
-            // Staff see all for now, to allow Ops to verify deletion
+            // Operator sees all
             query = {};
         }
 
@@ -187,6 +175,31 @@ router.delete('/:id', auth, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ msg: 'Server Error', error: err.message, stack: err.stack });
+    }
+});
+
+// Update announcement status (Approve/Reject)
+router.put('/:id/status', auth, async (req, res) => {
+    if (req.user.role !== 'CHAIRMAN') {
+        return res.status(403).json({ msg: 'Not authorized to approve/reject' });
+    }
+
+    const { status, feedback } = req.body;
+
+    try {
+        const announcement = await Announcement.findById(req.params.id);
+        if (!announcement) {
+            return res.status(404).json({ msg: 'Announcement not found' });
+        }
+
+        if (status) announcement.status = status;
+        if (feedback) announcement.feedback = feedback;
+
+        await announcement.save();
+        res.json(announcement);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
 });
 

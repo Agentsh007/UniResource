@@ -20,9 +20,7 @@ const StaffLogin = () => {
     React.useEffect(() => {
         if (user) {
             if (user.role === 'CHAIRMAN') navigate('/chairman');
-            else if (user.role === 'COORDINATOR') navigate('/coordinator');
             else if (user.role === 'COMPUTER_OPERATOR') navigate('/operator');
-            else if (user.role === 'CC') navigate('/cc');
             else if (user.role === 'TEACHER') navigate('/teacher');
             else if (user.role === 'BATCH') navigate('/batch');
         }

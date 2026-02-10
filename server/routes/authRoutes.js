@@ -16,11 +16,11 @@ router.post('/register-public', async (req, res) => {
     const { full_name, email, password, role, secret_code, department } = req.body;
 
     // Validation
-    if (!['CHAIRMAN', 'TEACHER', 'COORDINATOR'].includes(role)) {
+    if (!['CHAIRMAN', 'TEACHER'].includes(role)) {
         return res.status(400).json({ msg: 'Invalid role for public registration' });
     }
 
-    if ((role === 'CHAIRMAN' || role === 'COORDINATOR') && secret_code !== process.env.CHAIRMAN_SECRET) {
+    if (role === 'CHAIRMAN' && secret_code !== process.env.CHAIRMAN_SECRET) {
         return res.status(400).json({ msg: 'Invalid Chairman Secret Code' });
     }
     if (role === 'TEACHER' && secret_code !== process.env.FACULTY_SECRET) {
@@ -52,7 +52,7 @@ router.post('/register-public', async (req, res) => {
 });
 
 // @route   POST api/auth/create-staff
-// @desc    Chairman creates CC or Computer Operator
+// @desc    Chairman creates Computer Operator
 // @access  Chairman Only
 router.post('/create-staff', auth, async (req, res) => {
     if (req.user.role !== 'CHAIRMAN') {
@@ -61,7 +61,7 @@ router.post('/create-staff', auth, async (req, res) => {
 
     const { full_name, email, password, role, department } = req.body;
 
-    if (!['CC', 'COMPUTER_OPERATOR'].includes(role)) {
+    if (role !== 'COMPUTER_OPERATOR') {
         return res.status(400).json({ msg: 'Invalid role assignment' });
     }
 
@@ -233,64 +233,14 @@ router.get('/me', auth, async (req, res) => {
 
 // @route   GET api/auth/teachers
 // @desc    Get all teachers
-// @access  Chairman/Coord
+// @access  Chairman
 router.get('/teachers', auth, async (req, res) => {
-    if (req.user.role !== 'CHAIRMAN' && req.user.role !== 'COORDINATOR') {
+    if (req.user.role !== 'CHAIRMAN') {
         return res.status(403).json({ msg: 'Access denied' });
     }
     try {
-        const teachers = await User.find({ role: { $in: ['TEACHER', 'CC'] } }).select('-password').populate('assigned_batch', 'batch_name');
+        const teachers = await User.find({ role: 'TEACHER' }).select('-password').populate('assigned_batch', 'batch_name');
         res.json(teachers);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
-});
-
-// @route   PUT api/auth/assign-cc
-// @desc    Assign a teacher as CC for a batch
-// @access  Chairman Only
-router.put('/assign-cc', auth, async (req, res) => {
-    if (req.user.role !== 'CHAIRMAN') {
-        return res.status(403).json({ msg: 'Access denied' });
-    }
-    const { teacher_id, batch_id } = req.body;
-    try {
-        const teacher = await User.findById(teacher_id);
-        if (!teacher || teacher.role !== 'TEACHER') {
-            return res.status(400).json({ msg: 'Invalid teacher selected' });
-        }
-
-        teacher.assigned_batch = batch_id;
-        teacher.role = 'CC'; // Promote to CC
-
-        await teacher.save();
-        res.json({ msg: 'Teacher promoted to CC successfully', teacher });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
-});
-
-// @route   PUT api/auth/remove-cc
-// @desc    Remove CC role from teacher
-// @access  Chairman Only
-router.put('/remove-cc', auth, async (req, res) => {
-    if (req.user.role !== 'CHAIRMAN') {
-        return res.status(403).json({ msg: 'Access denied' });
-    }
-    const { teacher_id } = req.body;
-    try {
-        const teacher = await User.findById(teacher_id);
-        if (!teacher) {
-            return res.status(404).json({ msg: 'Teacher not found' });
-        }
-
-        teacher.assigned_batch = null;
-        teacher.role = 'TEACHER'; // Demote to Teacher
-
-        await teacher.save();
-        res.json({ msg: 'CC revoked successfully', teacher });
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');

@@ -9,8 +9,8 @@ const Document = require('../models/Document');
 // @desc    Create a new batch
 // @access  Coordinator Only
 router.post('/', auth, async (req, res) => {
-    if (req.user.role !== 'COORDINATOR' && req.user.role !== 'CHAIRMAN') {
-        return res.status(403).json({ msg: 'Access denied: Coordinators only' });
+    if (req.user.role !== 'COORDINATOR' && req.user.role !== 'CHAIRMAN' && req.user.role !== 'COMPUTER_OPERATOR') {
+        return res.status(403).json({ msg: 'Access denied: Staff only' });
     }
 
     const { batch_name, batch_username, batch_password } = req.body;
@@ -58,7 +58,7 @@ router.get('/', auth, async (req, res) => {
 // @desc    Delete a batch
 // @access  Coordinator Only
 router.delete('/:id', auth, async (req, res) => {
-    if (req.user.role !== 'COORDINATOR' && req.user.role !== 'CHAIRMAN') {
+    if (req.user.role !== 'COORDINATOR' && req.user.role !== 'CHAIRMAN' && req.user.role !== 'COMPUTER_OPERATOR') {
         return res.status(403).json({ msg: 'Access denied' });
     }
 
