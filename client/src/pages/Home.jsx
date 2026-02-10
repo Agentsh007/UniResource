@@ -24,7 +24,7 @@ const Home = () => {
             <div className="home-page" style={{ overflowX: 'hidden', fontFamily: "'Inter', sans-serif" }}>
 
                 {/* HERO SECTION */}
-                <section style={{
+                <section id="home-hero" style={{
                     padding: '8rem 1rem',
                     textAlign: 'center',
                     background: '#f8fafc',
@@ -101,7 +101,7 @@ const Home = () => {
                 </section>
 
                 {/* SERVICES SECTION */}
-                <section style={{ padding: '6rem 1rem', background: 'white' }}>
+                <section id="services" style={{ padding: '6rem 1rem', background: 'white' }}>
                     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                         <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
                             <h2 style={{ fontSize: '2.5rem', color: '#1e293b', marginBottom: '1rem', fontWeight: '800' }}>Our Services</h2>
@@ -170,7 +170,7 @@ const Home = () => {
                 </section>
 
                 {/* CONTACT SECTION */}
-                <section style={{ background: '#1e293b', color: 'white', padding: '6rem 1rem 2rem 1rem' }}>
+                <section id="contact" style={{ background: '#1e293b', color: 'white', padding: '6rem 1rem 2rem 1rem' }}>
                     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '6rem', marginBottom: '6rem' }}>
 
@@ -268,10 +268,6 @@ const Home = () => {
                                 </form>
                             </div>
 
-                        </div>
-
-                        <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem', paddingTop: '2rem', borderTop: '1px solid #334155' }}>
-                            © 2026 UniResource Platform. All rights reserved.
                         </div>
                     </div>
                 </section>
