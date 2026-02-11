@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Home from './pages/Home';
 import StaffLogin from './pages/StaffLogin';
@@ -69,6 +70,7 @@ const App = () => {
             element={<PrivateRoute role="BATCH"><BatchFiles /></PrivateRoute>}
           />
         </Routes>
+        <Analytics />
       </Router>
     </AuthProvider>
   );
